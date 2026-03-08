@@ -4,12 +4,11 @@ description: "Product Manager. Clarifies the problem, scope, and acceptance crit
 model: sonnet
 tools:
   - Read
+  - Write
   - Grep
   - Glob
   - Bash
   - Agent(explore)
-disallowedTools:
-  - Edit
 memory: user
 skills:
   - context-discovery

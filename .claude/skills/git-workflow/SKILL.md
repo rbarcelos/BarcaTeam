@@ -1,3 +1,8 @@
+---
+name: git-workflow
+description: Standard git conventions for worktree setup, branching, commit messages, PRs, and cleanup during capability implementation.
+---
+
 # Git Workflow
 
 Standard git conventions for capability implementation.

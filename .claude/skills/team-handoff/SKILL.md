@@ -1,3 +1,8 @@
+---
+name: team-handoff
+description: Standard handoff message format and matrix for passing work between PM, Architect, Senior Engineer, and QA agents, including escalation rules.
+---
+
 # Team Handoff Protocol
 
 Standard protocol for passing work between agents in the PM → Architect → Engineer → QA pipeline.

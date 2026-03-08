@@ -1,3 +1,8 @@
+---
+name: context-discovery
+description: Standard procedure for discovering repos, reading project instructions, scanning docs, and mining history before starting any capability work.
+---
+
 # Context Discovery
 
 Standard procedure for discovering project context. Run this BEFORE any other work.

@@ -1,3 +1,8 @@
+---
+name: document-templates
+description: Canonical templates for PM_BRIEF.md, ARCHITECTURE.md, EXECUTION_PLAN.md, and QA_REPORT.md capability documents.
+---
+
 # Document Templates
 
 Canonical templates for capability documents. Use these exact structures for consistency.

@@ -8,9 +8,6 @@ tools:
   - Glob
   - Bash
   - Agent(explore)
-disallowedTools:
-  - Write
-  - Edit
 memory: user
 skills:
   - context-discovery

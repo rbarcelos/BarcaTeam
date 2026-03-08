@@ -6,10 +6,6 @@ tools:
   - Read
   - Grep
   - Glob
-disallowedTools:
-  - Write
-  - Edit
-  - Bash
 memory: user
 skills:
   - context-discovery

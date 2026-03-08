@@ -4,12 +4,11 @@ description: "QA Engineer. Validates acceptance criteria after implementation, e
 model: sonnet
 tools:
   - Read
+  - Write
   - Grep
   - Glob
   - Bash
   - Agent(explore)
-disallowedTools:
-  - Edit
 memory: user
 skills:
   - context-discovery

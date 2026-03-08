@@ -1,3 +1,8 @@
+---
+name: issue-templates
+description: Standard GitHub issue formats for implementation tasks, bug reports, and follow-up issues.
+---
+
 # Issue Templates
 
 Standard GitHub issue formats for implementation tasks and bug reports.

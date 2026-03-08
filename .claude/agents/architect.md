@@ -4,12 +4,11 @@ description: "Architect. Designs the solution across repos, defines data contrac
 model: sonnet
 tools:
   - Read
+  - Write
   - Grep
   - Glob
   - Bash
   - Agent(explore)
-disallowedTools:
-  - Edit
 memory: user
 skills:
   - context-discovery

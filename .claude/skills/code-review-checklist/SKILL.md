@@ -1,3 +1,8 @@
+---
+name: code-review-checklist
+description: Structured review process covering architecture compliance, data contracts, error handling, security, testing, and code quality for engineer self-review and architect sign-off.
+---
+
 # Code Review Checklist
 
 Structured review process for both self-review (engineer) and sign-off (architect).

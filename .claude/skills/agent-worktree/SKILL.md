@@ -1,3 +1,8 @@
+---
+name: agent-worktree
+description: Five callable operations (create, switch, refactor, merge, cleanup) for isolated agent work in git worktrees, including conflict protocol.
+---
+
 # Worktree Manager
 
 Provides five callable operations for isolated agent work. Call them in order: **create → (switch) → refactor → merge → cleanup**.
