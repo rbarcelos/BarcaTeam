@@ -19,6 +19,7 @@ if "%~1"=="" (
 
 REM ---- Configurable settings ----
 set DISTRO=Ubuntu
+set WSLUSER=rbarcelo
 set SESSION=barcateam
 
 REM ---- Check for --reset flag ----
@@ -36,13 +37,13 @@ if "%~1"=="" (
 REM ---- Convert this script's directory to a WSL path (strip trailing backslash first) ----
 set "SCRIPT_PATH=%~dp0"
 set "SCRIPT_PATH=!SCRIPT_PATH:~0,-1!"
-for /f "delims=" %%P in ('wsl -d %DISTRO% -- wslpath -u "!SCRIPT_PATH!"') do set SCRIPT_DIR=%%P
+for /f "delims=" %%P in ('wsl -d %DISTRO% -u %WSLUSER% -- wslpath -u "!SCRIPT_PATH!"') do set SCRIPT_DIR=%%P
 
 REM ---- Build $REPOS (colon-separated WSL paths) from all arguments ----
 set REPOS=
 :loop
 if "%~1"=="" goto launch
-for /f "delims=" %%P in ('wsl -d %DISTRO% -- wslpath -u "%~1"') do set WSL_PATH=%%P
+for /f "delims=" %%P in ('wsl -d %DISTRO% -u %WSLUSER% -- wslpath -u "%~1"') do set WSL_PATH=%%P
 if "!REPOS!"=="" (set REPOS=!WSL_PATH!) else (set REPOS=!REPOS!:!WSL_PATH!)
 shift
 goto loop
@@ -54,4 +55,4 @@ echo  Repos: !REPOS!
 if "!RESET!"=="1" echo  Mode: --reset ^(existing session will be killed^)
 echo.
 
-wsl -d %DISTRO% bash -lc "sed -i 's/\r//' '!SCRIPT_DIR!/launch.sh' && SESSION=%SESSION% REPOS='!REPOS!' RESET=!RESET! TEAM_DIR='!SCRIPT_DIR!' bash '!SCRIPT_DIR!/launch.sh'"
+wsl -d %DISTRO% -u %WSLUSER% bash -lc "sed -i 's/\r//' '!SCRIPT_DIR!/launch.sh' && SESSION=%SESSION% REPOS='!REPOS!' RESET=!RESET! TEAM_DIR='!SCRIPT_DIR!' bash '!SCRIPT_DIR!/launch.sh'"
