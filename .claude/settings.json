@@ -1,0 +1,15 @@
+{
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
+  "teamMateMode": "tmux",
+  "model": "sonnet",
+  "permissions": {
+    "allow": [
+      "Bash(git *)",
+      "Bash(gh *)"
+    ],
+    "defaultMode": "acceptEdits"
+  },
+  "includeCoAuthoredBy": true
+}

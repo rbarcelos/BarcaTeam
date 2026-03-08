@@ -6,8 +6,6 @@
 #   Window 0 "lead"     — Claude agent (full pane)
 #   Window N "<repo>"   — one window per repo, 3 panes: logs | tests | ops
 
-export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
-
 # ── Bootstrap nvm so WSL-native node/claude takes priority over /mnt/c/ ──────
 export NVM_DIR="$HOME/.nvm"
 # shellcheck source=/dev/null
@@ -59,7 +57,7 @@ fi
 NVM_INIT="export NVM_DIR=\"\$HOME/.nvm\" && [ -s \"\$NVM_DIR/nvm.sh\" ] && source \"\$NVM_DIR/nvm.sh\" && nvm use --lts --silent"
 
 tmux new-session -d -s "$SESSION" -n "lead"
-tmux send-keys -t "$SESSION:lead.0" "$NVM_INIT && cd '$TEAM_DIR' && claude --teammate-mode auto $ADD_DIRS" C-m
+tmux send-keys -t "$SESSION:lead.0" "$NVM_INIT && cd '$TEAM_DIR' && claude --teammate-mode tmux $ADD_DIRS" C-m
 
 # ── One window per repo ───────────────────────────────────────────────────────
 for repo_path in "${REPO_PATHS[@]}"; do
