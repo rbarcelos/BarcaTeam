@@ -9,7 +9,6 @@ tools:
   - Bash
   - Agent(explore)
 disallowedTools:
-  - Write
   - Edit
 memory: user
 skills:

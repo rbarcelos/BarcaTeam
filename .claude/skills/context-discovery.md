@@ -4,7 +4,10 @@ Standard procedure for discovering project context. Run this BEFORE any other wo
 
 ## Steps
 
-1. **Find all repos** you have access to by listing directories and checking for `.git/` folders.
+1. **Find all repos** you have access to:
+   - Run `echo $REPOS` — when set, this contains colon-separated WSL paths to every repo passed via `--add-dir` at launch.
+   - Parse each path: `IFS=':' read -ra REPO_PATHS <<< "$REPOS"` then inspect each entry.
+   - If `$REPOS` is empty, fall back to listing parent/sibling directories and checking for `.git/` folders.
 
 2. **Read project instructions** (in order of priority):
    - `CLAUDE.md` at repo root

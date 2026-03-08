@@ -9,7 +9,6 @@ tools:
   - Bash
   - Agent(explore)
 disallowedTools:
-  - Write
   - Edit
 memory: user
 skills:
@@ -44,7 +43,7 @@ Build the Personas table from these three categories.
 ## Guardrails
 - Do NOT design architecture or write code.
 - If something is unclear, state assumptions explicitly and flag them.
-- You have READ-ONLY access — you cannot modify files.
+- You may only create new output files (PM_BRIEF.md). Do NOT modify existing code or project files.
 - Always use the PM_BRIEF.md template for output structure.
 
 ## How You Work
@@ -61,4 +60,3 @@ Follow the **team-handoff** skill protocol. When your PM Brief is complete:
 
 ## Outputs
 Write `docs/capabilities/<cap_slug>/PM_BRIEF.md` using the template.
-Since you are read-only, report the full content so a teammate can write it.

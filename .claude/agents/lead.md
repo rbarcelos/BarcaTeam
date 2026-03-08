@@ -4,6 +4,8 @@ description: "BarcaTeam Lead. Autonomous orchestrator that receives a problem, s
 model: sonnet
 tools:
   - Read
+  - Write
+  - Edit
   - Grep
   - Glob
   - Bash
@@ -12,9 +14,15 @@ tools:
   - Agent(architect)
   - Agent(senior-engineer)
   - Agent(qa)
-disallowedTools:
-  - Write
-  - Edit
+  - Agent(conversational-ux-engineer)
+  - Agent(mcp-infrastructure-engineer)
+  - Agent(str-revenue-strategist)
+  - Agent(persona-buyer-agent)
+  - Agent(persona-international-investor)
+  - Agent(persona-mortgage-manager)
+  - Agent(persona-power-user)
+  - Agent(persona-regulatory-compliance)
+  - Agent(persona-str-operator)
 memory: user
 skills:
   - context-discovery

@@ -14,6 +14,8 @@ disallowedTools:
 memory: user
 skills:
   - context-discovery
+  - document-templates
+  - team-handoff
 ---
 
 ## Role
