@@ -123,7 +123,53 @@ git push origin "cap/$CAP_SLUG"
 echo "MERGED: $BRANCH → cap/$CAP_SLUG"
 ```
 
-### MERGE — Cap Branch → Main (Lead, after QA PASS + architect sign-off)
+### MERGE — Cap Branch → Main (Lead, after QA PASS + architect sign-off + user approval)
+
+**Step 1 — Generate PR Review and present to user (BEFORE opening any PR)**
+
+Produce a `CAP_REVIEW.md` and present it to the user for approval:
+
+```markdown
+# Capability Review — `<cap_slug>`
+
+## What Was Built
+<2-3 sentence summary of the capability>
+
+## Acceptance Criteria
+| AC | Description | Status |
+|---|---|---|
+| AC-1 | <criterion> | ✅ PASS / ❌ FAIL |
+| AC-2 | <criterion> | ✅ PASS |
+
+## Changes by Repo
+### `<repo-name>`
+- `<file>` — <what changed>
+- `<file>` — <what changed>
+
+```bash
+# Full diff summary per repo:
+git -C <repo> diff main...cap/<cap_slug> --stat
+```
+
+## QA Sign-off
+- Unit tests: PASS (`<command>`)
+- Integration tests: PASS (`<command>`)
+- E2E: PASS (`<command>`)
+- Regressions: none
+
+## Architect Sign-off
+✅ Approved — <architect's verdict>
+
+## Follow-up Issues Filed
+- #<N> — <title>
+
+## Known Risks / Notes
+<anything the reviewer should be aware of>
+```
+
+Present to user and **STOP**. Do not open any PR until the user explicitly approves.
+
+**Step 2 — After user approves, open PRs**
 
 ```bash
 CAP_SLUG="<cap_slug>"
@@ -131,20 +177,22 @@ CAP_SLUG="<cap_slug>"
 for REPO_DIR in <repo1> <repo2> ...; do
   REPO_ROOT=$(git -C "$REPO_DIR" rev-parse --show-toplevel)
   MAIN=$(git -C "$REPO_ROOT" remote show origin | awk '/HEAD branch/{print $NF}')
-  REPO_NAME=$(gh repo view --json nameWithOwner -q .nameWithOwner)
+  REPO_NAME=$(gh repo view -C "$REPO_ROOT" --json nameWithOwner -q .nameWithOwner)
 
   gh pr create \
     --repo "$REPO_NAME" \
     --head "cap/$CAP_SLUG" \
     --base "$MAIN" \
     --title "feat($CAP_SLUG): merge capability to main" \
-    --body "Capability \`$CAP_SLUG\` complete. QA signed off. Architect approved."
+    --body-file "CAP_REVIEW.md"
 
   echo "PR OPENED: cap/$CAP_SLUG → $MAIN on $(basename $REPO_ROOT)"
 done
 ```
 
-Never merge cap → main without QA `PASS` + architect sign-off. Always via PR, never direct push.
+**If user requests changes:** loop back to the appropriate step, fix, re-run QA, regenerate CAP_REVIEW.md.
+
+Never merge cap → main without explicit user approval. Always via PR, never direct push.
 
 ### CLEANUP — After PR Merged
 

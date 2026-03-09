@@ -195,9 +195,21 @@ Follow the **git-workflow** skill "Step 0 — Create Cap Branch":
 - Update `team_plan.md` checkboxes as tasks complete.
 
 ### Step 5: Validate (parallel fleet)
-Spawn validation agents **in parallel** — each verifies from their own perspective:
+Spawn validation agents **in parallel** — each verifies from their own perspective.
 
-- **qa**: Run test suite, check acceptance criteria, verify backward compatibility, file issues for failures.
+#### Step 5.1 — QA (parallel by repo + e2e)
+Always spawn **multiple QA agents in parallel**, split by concern:
+- **qa-{repo}** (one per affected repo): Run test suite (`pytest`), syntax check all modified files, spot-check critical fixes. Each writes a `QA_{REPO}_REPORT.md`.
+- **qa-e2e**: Ad-hoc end-to-end testing — run the product (e.g., `demo_e2e.py`), verify fixes are reflected in output, check for rendering issues, regressions, broken data. Writes `QA_E2E_REPORT.md`.
+
+Example for 2 repos:
+| Agent | Profile | Scope |
+|---|---|---|
+| `qa-client` | `qa` | investFlorida.ai — pytest + syntax + spot-checks |
+| `qa-server` | `qa` | str_simulation — pytest + syntax + spot-checks |
+| `qa-e2e` | `qa` | Ad-hoc e2e — run product, verify output |
+
+#### Step 5.2 — PM + Domain Validation
 - **pm**: Review solution against the original requirements and acceptance criteria from Step 2. Does it solve the user's actual problem?
 - **Domain agents** (same ones from Step 2): Re-evaluate from their specialized perspective. Does the solution meet the domain-specific needs they identified?
 
@@ -208,14 +220,30 @@ Spawn validation agents **in parallel** — each verifies from their own perspec
 - For improvements → file as follow-up issues and proceed.
 
 ### Step 6: Deliver
-When validation passes and architect has signed off:
-- Follow the **git-workflow** skill "Final Step — Merge Cap Branch to Main".
-- Open one PR per repo: `cap/<cap_slug>` → `main`.
-- Link all capability issues and QA_REPORT.md in each PR body.
-- Wait for PR merge (manual review or auto-merge if configured).
-- After merge: clean up cap branches and worktrees per git-workflow cleanup section.
-- Present to user: what was built, validated, PRs merged, follow-up issues filed.
-- Shut down idle agents to conserve resources.
+
+#### Step 6.1 — Generate PR Review
+Follow the **git-workflow** skill "MERGE — Cap Branch → Main", Step 1:
+- Collect QA reports, architect sign-off, acceptance criteria results, and diff stats from all repos.
+- Produce `CAP_REVIEW.md` using the PR Review template from git-workflow.
+- Present it to the user and **STOP. Wait for explicit approval.**
+
+#### Step 6.2 — User Approval Gate
+**Do not open any PR until the user says yes.**
+
+If the user requests changes:
+- Identify which step to loop back to (Step 4.3 for code changes, Step 5 for validation).
+- Fix, re-validate, regenerate `CAP_REVIEW.md`, and re-present.
+
+#### Step 6.3 — Open PRs and Merge
+Once the user approves:
+- Follow git-workflow Step 2: open one PR per repo (`cap/<cap_slug>` → `main`) using `CAP_REVIEW.md` as the PR body.
+- Share PR links with the user.
+
+#### Step 6.4 — Cleanup
+After PRs are merged:
+- Run the **CLEANUP** operation from **git-workflow** for all worktrees and cap branches.
+- Shut down idle agents.
+- File any follow-up issues that emerged during delivery.
 
 ## Rules
 - **Understand before planning.** Never skip Step 2. The quality of the plan depends on understanding needs first.
@@ -224,6 +252,7 @@ When validation passes and architect has signed off:
 - **Parallel when independent, sequential when dependent.** Steps 2 and 5 are parallel fleets. Step 4 is sequential (architect → engineer).
 - **Plan to disk.** Always write `team_plan.md` so all agents share context. Update it as work progresses.
 - **Gate before coding.** Always require lead approval before the engineer starts writing code.
+- **Gate before merging.** Always present CAP_REVIEW.md to the user and wait for explicit approval before opening any PR to main.
 - **Minimum viable team.** Don't spawn agents that aren't needed. A bug fix might only need senior-engineer → qa. A research question might be fully answered in Step 2.
 - **Ask when uncertain.** If discovery agents raise unanswered questions, ask the user — don't guess.
 - **Always use TeamCreate.** Every task in this repo is team work. Always create teams with tmux panes — never use background Agent subagents for implementation work.
