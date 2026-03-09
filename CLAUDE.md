@@ -1,22 +1,24 @@
 # BarcaTeam — Claude Code Instructions
 
-When a user describes a problem or asks a question, delegate to the **lead** agent.
-The lead agent handles context discovery, agent selection, planning, and execution.
+Agent teams are enabled. Ask Claude to spawn a team and describe what you want in natural language.
 
-For simple questions that don't need a team, answer directly.
+## Routing Rules
 
-## Claude-Specific Configuration
+- **Every task in this repo is team work.** Always invoke `@lead`, always use `TeamCreate` with tmux panes. Never use background `Agent` subagents — the user needs visible panes to watch progress.
+- If the user wanted solo work, they would be in the solution repo (`investFlorida.ai`, `str_simulation`) directly — not here.
+- The lead orchestrates: spawns teammates, creates tasks, coordinates, and never implements directly.
 
-### Agent Teams
-This project uses Claude Code Agent Teams (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`).
-The lead agent coordinates via shared task list, task dependencies, and plan approval gates.
+## Controls
 
-### Controls
 - `Ctrl+T` — toggle shared task list
 - `Shift+Down` — cycle through teammates
 - `Enter` — view a teammate's session
 - `Escape` — interrupt a teammate's turn
 - `Shift+Tab` — delegate mode (lead coordinates, doesn't implement)
 
-### Skills
+## Skills
+
 Agents reference skills from `.claude/skills/` for shared procedures.
+
+# currentDate
+Today's date is 2026-03-08.

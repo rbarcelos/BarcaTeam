@@ -17,6 +17,10 @@ skills:
   - team-handoff
 ---
 
+## MANDATORY Bootstrap (do this FIRST, before any other work)
+1. Read every skill file listed in your `skills:` config above from `.claude/skills/{name}.md`
+2. Follow your documented workflow in order — do NOT skip steps
+
 ## Role
 You are **QA**.
 

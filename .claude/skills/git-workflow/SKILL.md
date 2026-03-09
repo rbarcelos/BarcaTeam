@@ -1,30 +1,173 @@
 ---
 name: git-workflow
-description: Standard git conventions for worktree setup, branching, commit messages, PRs, and cleanup during capability implementation.
+description: Complete git conventions for capability implementation — cap branch lifecycle, agent worktree operations, commit messages, PRs, and cleanup.
 ---
 
 # Git Workflow
 
-Standard git conventions for capability implementation.
+---
 
-## Worktree Setup
+## Branch Naming
 
-For a capability `<cap_slug>` with repos discovered during Context Discovery:
+| Branch | Pattern | Owner | Purpose |
+|---|---|---|---|
+| Cap branch | `cap/<cap_slug>` | Lead | Shared integration branch for the capability |
+| Agent branch | `agent/<agent-name>/<cap_slug>` | Each agent | Isolated work branch, merged into cap |
+| Hotfix | `fix/<short-description>` | Engineer | Quick fixes outside a capability |
 
-```bash
-# For each repo:
-cd <repo-main-workdir>
-git fetch origin
-git worktree add -b cap/<cap_slug>-<repo-short-name> <worktrees-dir>/<cap_slug>/<repo-short-name> origin/<main-branch>
+Never commit directly to `main` or `cap/*`. Always work in an agent branch.
+
+---
+
+## Capability Branch Lifecycle
+
+```
+main
+ └── cap/<cap_slug>                        ← Lead creates, one per repo
+      ├── agent/architect/<cap_slug>        ← architect's worktree
+      ├── agent/senior-engineer/<cap_slug>  ← engineer's worktree
+      └── agent/ux-engineer/<cap_slug>      ← etc.
+           ↓ each merges into cap/<cap_slug> as work completes
+ └── main  ← cap/<cap_slug> merged via PR LAST, after QA signs off
 ```
 
-Work in the worktree, NOT the main workdir. This keeps main clean and avoids conflicts when multiple capabilities are in flight.
+---
 
-## Branching Convention
+## Operations
 
-- Feature branches: `cap/<cap_slug>-<repo-short-name>`
-- Hotfix branches: `fix/<short-description>`
-- Never commit directly to main.
+### CREATE — Cap Branch (Lead, before any agent starts)
+
+```bash
+CAP_SLUG="<cap_slug>"
+
+for REPO_DIR in <repo1> <repo2> ...; do
+  REPO_ROOT=$(git -C "$REPO_DIR" rev-parse --show-toplevel)
+  MAIN=$(git -C "$REPO_ROOT" remote show origin | awk '/HEAD branch/{print $NF}')
+
+  git -C "$REPO_ROOT" fetch origin
+
+  if git -C "$REPO_ROOT" ls-remote --heads origin "cap/$CAP_SLUG" | grep -q .; then
+    echo "EXISTS: cap/$CAP_SLUG on $(basename $REPO_ROOT)"
+    continue
+  fi
+
+  git -C "$REPO_ROOT" checkout -b "cap/$CAP_SLUG" "origin/$MAIN"
+  git -C "$REPO_ROOT" push origin "cap/$CAP_SLUG"
+  git -C "$REPO_ROOT" checkout "$MAIN"
+  echo "CREATED: cap/$CAP_SLUG on $(basename $REPO_ROOT)"
+done
+```
+
+### CREATE — Agent Worktrees (Lead, before spawning each teammate)
+
+The lead creates a worktree for each agent it is about to spawn, then passes the worktree path in the spawn prompt. Agents do not create their own worktrees.
+
+```bash
+# Run once per agent per repo before spawning that agent
+REPO_ROOT=$(git -C "$REPO_DIR" rev-parse --show-toplevel)
+BRANCH="agent/${AGENT_NAME}/${CAP_SLUG}"
+WORKTREE="${REPO_ROOT}/../worktrees/${CAP_SLUG}/${AGENT_NAME}"
+
+# Guard: skip if already exists
+if git -C "$REPO_ROOT" worktree list | grep -q "$WORKTREE"; then
+  echo "EXISTS: $WORKTREE"
+else
+  git -C "$REPO_ROOT" fetch origin
+  mkdir -p "$(dirname "$WORKTREE")"
+  git -C "$REPO_ROOT" worktree add -b "$BRANCH" "$WORKTREE" "origin/cap/$CAP_SLUG"
+  echo "CREATED: $WORKTREE (branch: $BRANCH)"
+fi
+
+# Include in spawn prompt:
+# "Your working directory is: $WORKTREE
+#  Your branch is: $BRANCH
+#  Base all changes in this worktree. Do not work outside it."
+```
+
+### RESUME — Existing Worktree
+
+When resuming after a restart or picking up an existing worktree:
+
+```bash
+REPO_ROOT=$(git -C "$REPO_DIR" rev-parse --show-toplevel)
+BRANCH="agent/${AGENT_NAME}/${CAP_SLUG}"
+WORKTREE="${REPO_ROOT}/../worktrees/${CAP_SLUG}/${AGENT_NAME}"
+
+if ! git -C "$REPO_ROOT" worktree list | grep -q "$WORKTREE"; then
+  echo "NOT FOUND: run CREATE first."
+  exit 1
+fi
+
+cd "$WORKTREE"
+git fetch origin
+git rebase "origin/cap/$CAP_SLUG"
+echo "RESUMED: $WORKTREE (rebased onto origin/cap/$CAP_SLUG)"
+```
+
+### MERGE — Agent Branch → Cap Branch (after agent's work is complete)
+
+```bash
+REPO_ROOT=$(git -C "$REPO_DIR" rev-parse --show-toplevel)
+BRANCH="agent/${AGENT_NAME}/${CAP_SLUG}"
+WORKTREE="${REPO_ROOT}/../worktrees/${CAP_SLUG}/${AGENT_NAME}"
+
+cd "$WORKTREE"
+git fetch origin
+git rebase "origin/cap/$CAP_SLUG"
+
+cd "$REPO_ROOT"
+git fetch origin
+git checkout "cap/$CAP_SLUG"
+git merge --no-ff "$BRANCH" -m "feat(${CAP_SLUG}): merge ${AGENT_NAME} work"
+git push origin "cap/$CAP_SLUG"
+echo "MERGED: $BRANCH → cap/$CAP_SLUG"
+```
+
+### MERGE — Cap Branch → Main (Lead, after QA PASS + architect sign-off)
+
+```bash
+CAP_SLUG="<cap_slug>"
+
+for REPO_DIR in <repo1> <repo2> ...; do
+  REPO_ROOT=$(git -C "$REPO_DIR" rev-parse --show-toplevel)
+  MAIN=$(git -C "$REPO_ROOT" remote show origin | awk '/HEAD branch/{print $NF}')
+  REPO_NAME=$(gh repo view --json nameWithOwner -q .nameWithOwner)
+
+  gh pr create \
+    --repo "$REPO_NAME" \
+    --head "cap/$CAP_SLUG" \
+    --base "$MAIN" \
+    --title "feat($CAP_SLUG): merge capability to main" \
+    --body "Capability \`$CAP_SLUG\` complete. QA signed off. Architect approved."
+
+  echo "PR OPENED: cap/$CAP_SLUG → $MAIN on $(basename $REPO_ROOT)"
+done
+```
+
+Never merge cap → main without QA `PASS` + architect sign-off. Always via PR, never direct push.
+
+### CLEANUP — After PR Merged
+
+```bash
+REPO_ROOT=$(git -C "$REPO_DIR" rev-parse --show-toplevel)
+BRANCH="agent/${AGENT_NAME}/${CAP_SLUG}"
+WORKTREE="${REPO_ROOT}/../worktrees/${CAP_SLUG}/${AGENT_NAME}"
+
+# Confirm branch is merged before removing
+cd "$REPO_ROOT"
+if ! git branch --merged | grep -q "$BRANCH"; then
+  echo "WARNING: $BRANCH not yet merged. Confirm before cleanup."
+  exit 1
+fi
+
+git worktree remove "$WORKTREE" --force
+git branch -d "$BRANCH"
+git push origin --delete "cap/$CAP_SLUG" 2>/dev/null || true
+git worktree prune
+echo "CLEANED: $WORKTREE and branches removed."
+```
+
+---
 
 ## Commit Messages
 
@@ -35,38 +178,20 @@ Use conventional commits:
 
 <optional body — what and why, not how>
 
-<optional footer — issue refs>
+Refs: #<issue>, AC-<N>
 ```
 
 **Types**: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`
 
-**Examples**:
-```
-feat(api): add MCP-friendly tool routing layer
+**Rules:**
+- Commit after each logical unit of work, not at end of day.
+- Each commit must build and pass lints.
+- Never leave the worktree dirty — commit WIP: `git commit -m "chore: WIP <description>"`
+- One logical concern per commit. Do not batch unrelated changes.
 
-Implements the tool handler registry and canonical request/response
-schemas as defined in ARCHITECTURE.md.
-
-Refs: #42, AC-1, AC-3
-```
-
-```
-test(api): add contract tests for valuation tool
-
-Covers request validation, error responses, and caching behavior.
-
-Refs: #42, AC-5
-```
-
-## Commit Discipline
-
-- Commit after each logical unit of work (not at end of day).
-- Each commit should build and pass lints.
-- Never stash in worktrees — commit WIP if needed: `git commit -m "chore: WIP <description>"`
+---
 
 ## PR Template
-
-When opening a PR, include:
 
 ```markdown
 ## Summary
@@ -95,11 +220,15 @@ When opening a PR, include:
 - [ ] No hardcoded secrets or credentials
 ```
 
-## Cleanup
+---
 
-When a capability is merged:
-```bash
-git worktree remove <worktree-path>
-git branch -d cap/<cap_slug>-<repo-short-name>
-git worktree prune
-```
+## Conflict Protocol
+
+When two agents need to edit the same file simultaneously:
+1. **Stop** — do not edit the file.
+2. **Message the lead** with: which file, which agents, what changes each needs.
+3. Lead assigns ownership — one agent proceeds, the other waits.
+4. Waiting agent rebases after first agent's commit is merged: `git rebase origin/cap/<cap_slug>`
+5. If rebase conflict is unresolvable, message the **architect**.
+
+Never force-push a shared branch (`cap/*` or `main`).

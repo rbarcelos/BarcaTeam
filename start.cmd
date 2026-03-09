@@ -27,7 +27,14 @@ set WSLUSER=rbarcelo
 REM ---- Convert this script's directory to a WSL path ----
 set "SCRIPT_PATH=%~dp0"
 set "SCRIPT_PATH=!SCRIPT_PATH:~0,-1!"
-for /f "delims=" %%P in ('wsl -d %DISTRO% -u %WSLUSER% -- wslpath -u "!SCRIPT_PATH!"') do set SCRIPT_DIR=%%P
+REM wslpath can't handle \\wsl.localhost\<DISTRO>\... UNC paths — strip the prefix manually
+set "WSL_PREFIX=\\wsl.localhost\%DISTRO%"
+if /i "!SCRIPT_PATH:~0,20!"=="\\wsl.localhost\" (
+    set "SCRIPT_DIR=!SCRIPT_PATH:%WSL_PREFIX%=!"
+    set "SCRIPT_DIR=!SCRIPT_DIR:\=/!"
+) else (
+    for /f "delims=" %%P in ('wsl -d %DISTRO% -u %WSLUSER% -- wslpath -u "!SCRIPT_PATH!"') do set SCRIPT_DIR=%%P
+)
 
 REM ---- Build args for start.sh (convert Windows paths, pass names as-is) ----
 set ARGS=

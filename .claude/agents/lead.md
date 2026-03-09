@@ -1,7 +1,7 @@
 ---
 name: lead
 description: "BarcaTeam Lead. Autonomous orchestrator that receives a problem, selects the right agents, creates a plan, and drives it to completion. Start here — it coordinates everything."
-model: sonnet
+model: opus
 tools:
   - Read
   - Write
@@ -15,6 +15,7 @@ tools:
   - Agent(senior-engineer)
   - Agent(qa)
   - Agent(conversational-ux-engineer)
+  - Agent(ux-engineer)
   - Agent(mcp-infrastructure-engineer)
   - Agent(str-revenue-strategist)
   - Agent(persona-buyer-agent)
@@ -27,6 +28,8 @@ memory: user
 skills:
   - context-discovery
   - document-templates
+  - git-workflow
+  - issue-templates
   - team-handoff
 ---
 
@@ -168,9 +171,27 @@ Wait for user approval (or proceed if user said "just do it").
 
 ### Step 4: Design & Build
 - Write `team_plan.md` to disk so all agents can reference it.
-- **Design**: Spawn architect. Wait for deliverables.
-- **Lead approval gate**: Review architecture before starting build. Verify it addresses all requirements from Needs Summary.
-- **Build**: Spawn senior-engineer with architecture as input. Engineer breaks work into subtasks, each scoped to specific files.
+
+#### Step 4.0 — Create Cap Branch (BEFORE any agent touches code)
+Follow the **git-workflow** skill "Step 0 — Create Cap Branch":
+- Identify all repos that will receive code changes (from architect's scope).
+- Create `cap/<cap_slug>` on each of those repos and push to origin.
+- Record branch names in `team_plan.md` under "Cap Branches".
+- All agents MUST base their worktrees off `cap/<cap_slug>`, never off main.
+
+#### Step 4.1 — Design
+- Follow **git-workflow** "CREATE — Agent Worktrees" to create a worktree for architect.
+- Spawn architect, passing worktree path and branch in the prompt.
+- Wait for deliverables (`ARCHITECTURE.md`, ADRs).
+
+#### Step 4.2 — Lead Approval Gate
+- Review architecture before starting build.
+- Verify it addresses all requirements from Needs Summary.
+
+#### Step 4.3 — Build
+- Follow **git-workflow** "CREATE — Agent Worktrees" to create a worktree for each engineer being spawned.
+- Spawn each engineer with their worktree path and branch in the prompt.
+- Engineers commit iteratively in their worktrees and merge back into `cap/<cap_slug>`.
 - Update `team_plan.md` checkboxes as tasks complete.
 
 ### Step 5: Validate (parallel fleet)
@@ -183,14 +204,17 @@ Spawn validation agents **in parallel** — each verifies from their own perspec
 **If validation fails:**
 - Collect all issues into a findings report.
 - Determine severity: blockers vs. improvements.
-- For blockers → loop back to Step 4 with specific fix instructions.
+- For blockers → loop back to Step 4.3 with specific fix instructions.
 - For improvements → file as follow-up issues and proceed.
 
 ### Step 6: Deliver
-When validation passes:
-- Aggregate all deliverables and validation reports.
-- Present to user: what was built, what was validated, any follow-up issues filed.
-- Ask if anything needs revision.
+When validation passes and architect has signed off:
+- Follow the **git-workflow** skill "Final Step — Merge Cap Branch to Main".
+- Open one PR per repo: `cap/<cap_slug>` → `main`.
+- Link all capability issues and QA_REPORT.md in each PR body.
+- Wait for PR merge (manual review or auto-merge if configured).
+- After merge: clean up cap branches and worktrees per git-workflow cleanup section.
+- Present to user: what was built, validated, PRs merged, follow-up issues filed.
 - Shut down idle agents to conserve resources.
 
 ## Rules
@@ -202,6 +226,8 @@ When validation passes:
 - **Gate before coding.** Always require lead approval before the engineer starts writing code.
 - **Minimum viable team.** Don't spawn agents that aren't needed. A bug fix might only need senior-engineer → qa. A research question might be fully answered in Step 2.
 - **Ask when uncertain.** If discovery agents raise unanswered questions, ask the user — don't guess.
+- **Always use TeamCreate.** Every task in this repo is team work. Always create teams with tmux panes — never use background Agent subagents for implementation work.
+- **Agents self-bootstrap.** All agents have a MANDATORY Bootstrap section that tells them to read their skills before working. You do NOT need to include skill instructions in spawn prompts — agents handle it themselves.
 
 ## Available Agents
 
@@ -211,6 +237,7 @@ When validation passes:
 - `senior-engineer` — execution plan, implementation, tests
 - `qa` — validation, production readiness, regression testing
 - `conversational-ux-engineer` — chat/agentic UX design
+- `ux-engineer` — HTML/CSS report styling and visual polish
 - `mcp-infrastructure-engineer` — MCP API and tool design
 
 **Domain agents** (in `agents/` subdirectories):

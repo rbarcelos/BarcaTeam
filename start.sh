@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # BarcaTeam — WSL-native launcher
-# Usage: ./start.sh [--reset] <repo1> [repo2] ...
+# Usage: ./start.sh [--reset] [--session <name>] <repo1> [repo2] ...
 #
 # Repo args can be:
 #   - a name     : investFlorida.ai        → expands to ~/repos/investFlorida.ai
@@ -8,6 +8,7 @@
 #
 # Examples:
 #   ./start.sh investFlorida.ai str_simulation
+#   ./start.sh --session mywork investFlorida.ai
 #   ./start.sh --reset investFlorida.ai str_simulation
 
 set -euo pipefail
@@ -17,7 +18,7 @@ SESSION=barcateam
 RESET=0
 
 if [ $# -eq 0 ]; then
-    echo "Usage: ./start.sh [--reset] <repo1> [repo2] ..."
+    echo "Usage: ./start.sh [--reset] [--session <name>] <repo1> [repo2] ..."
     echo "       repo can be a name (expanded to ~/repos/<name>) or a full path"
     exit 1
 fi
@@ -25,6 +26,11 @@ fi
 if [ "$1" = "--reset" ]; then
     RESET=1
     shift
+fi
+
+if [ "${1:-}" = "--session" ]; then
+    SESSION="$2"
+    shift 2
 fi
 
 if [ $# -eq 0 ]; then
@@ -54,6 +60,7 @@ done
 
 echo ""
 echo " BarcaTeam — Starting agent orchestration hub..."
+echo " Session: $SESSION"
 echo " Repos: $REPOS"
 [ "$RESET" = "1" ] && echo " Mode: --reset (existing session will be killed)"
 echo ""
