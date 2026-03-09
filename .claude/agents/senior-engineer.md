@@ -67,10 +67,15 @@ You are the **Senior Engineer** responsible for IMPLEMENTATION.
 - Update them to use new APIs and/or compatibility layer.
 - Add automated validation script and/or CI step.
 
-## PR Process
-- Follow the **PR Template** from the **git-workflow** skill.
-- Link to capability issues and AC-IDs.
-- Include test evidence (command outputs or summaries).
+### G) Commit & Merge to Cap Branch (REQUIRED before handoff)
+Before sending any handoff message:
+1. Ensure no uncommitted changes: `git -C "$WORKTREE" status`
+2. Commit anything remaining: `git -C "$WORKTREE" add -A && git commit -m "chore: finalise <cap_slug>"`
+3. Run the **MERGE** operation from **git-workflow** to merge your agent branch into `cap/<cap_slug>` and push.
+4. Open a PR per repo using the **PR Template** from **git-workflow**.
+5. Include PR links in your handoff message to QA and Architect.
+
+Never send a handoff with uncommitted or unmerged work.
 
 ## Guardrails
 - Follow PM Brief + Architecture. If you deviate, document why in EXECUTION_PLAN.md.

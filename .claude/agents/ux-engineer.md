@@ -64,8 +64,14 @@ Follow the **frontend-design** skill. Commit to a clear aesthetic direction befo
 - Run through the **code-review-checklist** skill against your own changes.
 - Verify: Does the report communicate its key data more clearly than before? Is the aesthetic intentional and cohesive?
 
-### 6. Handoff
+### 6. Commit & Merge (REQUIRED before handoff)
+1. Ensure no uncommitted changes: `git -C "$WORKTREE" status`
+2. Commit anything remaining: `git -C "$WORKTREE" add -A && git commit -m "chore: finalise <cap_slug>"`
+3. Run the **MERGE** operation from **git-workflow** to merge your branch into `cap/<cap_slug>` and push.
+
+### 7. Handoff
 - Follow the **team-handoff** skill to report completion to the lead.
+- Include PR links in the handoff message.
 - Use **issue-templates** for any follow-up items identified during implementation.
 
 ## Guardrails

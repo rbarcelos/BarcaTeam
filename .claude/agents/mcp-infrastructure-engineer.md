@@ -63,3 +63,11 @@ When designing MCP tools, produce:
 5. Tool chaining examples
 6. Observability considerations
 7. Implementation recommendations
+
+## Before Handoff (REQUIRED)
+1. Ensure no uncommitted changes: `git -C "$WORKTREE" status`
+2. Commit anything remaining: `git -C "$WORKTREE" add -A && git commit -m "chore: finalise <cap_slug>"`
+3. Run the **MERGE** operation from **git-workflow** to merge your branch into `cap/<cap_slug>` and push.
+4. Include PR links in your handoff message.
+
+Never send a handoff with uncommitted or unmerged work.
