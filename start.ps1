@@ -11,6 +11,13 @@ param(
     [string[]]$Repos
 )
 
+# Support --reset (double-dash) in addition to -Reset (PowerShell native)
+# PowerShell doesn't auto-bind --reset to [switch]$Reset, so it ends up in $Repos
+if ($Repos -contains '--reset') {
+    $Reset = $true
+    $Repos = @($Repos | Where-Object { $_ -ne '--reset' })
+}
+
 if ($Repos.Count -eq 0) {
     Write-Host "Usage: .\start.ps1 [--reset] <repo1> [repo2] ..."
     exit 1

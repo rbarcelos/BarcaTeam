@@ -68,7 +68,7 @@
       "Bash(uvicorn *)",
       "Bash(docker *)"
     ],
-    "defaultMode": "bypassPermissions"
+    "defaultMode": "auto"
   },
   "model": "opus",
   "teammateMode": "tmux",

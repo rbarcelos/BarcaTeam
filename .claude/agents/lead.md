@@ -194,11 +194,23 @@ Follow the **git-workflow** skill "Step 0 — Create Cap Branch":
 - Engineers commit iteratively in their worktrees and merge back into `cap/<cap_slug>`.
 - Update `team_plan.md` checkboxes as tasks complete.
 
-### Step 5: Validate (parallel fleet)
-Spawn validation agents **in parallel** — each verifies from their own perspective.
+### Step 5: Validate (MANDATORY — never skip)
+**Every orchestration MUST include a validation step.** This is non-negotiable regardless of task size. Select validators based on the type of change:
+
+#### Validation Matrix — Choose Validators by Change Type
+
+| Change Type | Required Validators | What They Check |
+|---|---|---|
+| **Code changes** (features, fixes, refactors) | QA (per-repo + e2e) + PM | Tests pass, no regressions, requirements met |
+| **Data model / API changes** | QA + Architect + domain personas | Contract integrity, downstream consumers, realistic data |
+| **Report / UX changes** | QA-e2e + PM + relevant personas | Visual output correct, user expectations met |
+| **Financial logic changes** | QA + str-revenue-strategist + persona-mortgage-manager | Numbers realistic, edge cases handled |
+| **Compliance / regulatory changes** | QA + persona-regulatory-compliance + persona-buyer-agent | Rules accurate, risk warnings appropriate |
+| **Research / analysis (no code)** | PM + relevant domain personas | Findings accurate, actionable, complete |
+| **Issue filing / triage** | PM (review priorities) or persona (evaluate relevance) | Correct severity, nothing missed, well-scoped |
 
 #### Step 5.1 — QA (parallel by repo + e2e)
-Always spawn **multiple QA agents in parallel**, split by concern:
+For any change that touches code, always spawn **multiple QA agents in parallel**, split by concern:
 - **qa-{repo}** (one per affected repo): Run test suite (`pytest`), syntax check all modified files, spot-check critical fixes. Each writes a `QA_{REPO}_REPORT.md`.
 - **qa-e2e**: Ad-hoc end-to-end testing — run the product (e.g., `demo_e2e.py`), verify fixes are reflected in output, check for rendering issues, regressions, broken data. Writes `QA_E2E_REPORT.md`.
 
@@ -209,10 +221,13 @@ Example for 2 repos:
 | `qa-server` | `qa` | str_simulation — pytest + syntax + spot-checks |
 | `qa-e2e` | `qa` | Ad-hoc e2e — run product, verify output |
 
-#### Step 5.2 — PM + Domain Validation
+#### Step 5.2 — PM + Domain/Persona Validation
 - **pm**: Review solution against the original requirements and acceptance criteria from Step 2. Does it solve the user's actual problem?
-- **Domain agents** (same ones from Step 2): Re-evaluate from their specialized perspective. Does the solution meet the domain-specific needs they identified?
+- **Domain agents / Personas** (same ones from Step 2, plus any from the validation matrix): Re-evaluate from their specialized perspective. Does the solution meet the domain-specific needs they identified?
 
+**For non-code tasks** (research, triage, analysis): at minimum spawn PM or a relevant persona to validate the output is correct, complete, and well-scoped.
+
+#### Step 5.3 — Handle Failures
 **If validation fails:**
 - Collect all issues into a findings report.
 - Determine severity: blockers vs. improvements.
@@ -253,7 +268,8 @@ After PRs are merged:
 - **Plan to disk.** Always write `team_plan.md` so all agents share context. Update it as work progresses.
 - **Gate before coding.** Always require lead approval before the engineer starts writing code.
 - **Gate before merging.** Always present CAP_REVIEW.md to the user and wait for explicit approval before opening any PR to main.
-- **Minimum viable team.** Don't spawn agents that aren't needed. A bug fix might only need senior-engineer → qa. A research question might be fully answered in Step 2.
+- **Always validate.** Every orchestration MUST have a validation step (Step 5). For code: QA + PM. For analysis/triage: PM or personas. For financial changes: str-revenue-strategist. Pick from the validation matrix — but never skip it entirely.
+- **Minimum viable team.** Don't spawn agents that aren't needed. A bug fix might only need senior-engineer → qa. A research question might be fully answered in Step 2 but still needs PM validation.
 - **Ask when uncertain.** If discovery agents raise unanswered questions, ask the user — don't guess.
 - **Always use TeamCreate.** Every task in this repo is team work. Always create teams with tmux panes — never use background Agent subagents for implementation work.
 - **Agents self-bootstrap.** All agents have a MANDATORY Bootstrap section that tells them to read their skills before working. You do NOT need to include skill instructions in spawn prompts — agents handle it themselves.
