@@ -51,6 +51,7 @@
       "Bash(cd *)",
       "Bash(pytest *)",
       "Bash(curl *)",
+      "Bash(psmux *)",
       "Bash(tmux *)",
       "Bash(sed *)",
       "Bash(awk *)",
@@ -68,7 +69,7 @@
       "Bash(uvicorn *)",
       "Bash(docker *)"
     ],
-    "defaultMode": "auto"
+    "defaultMode": "default"
   },
   "model": "opus",
   "teammateMode": "tmux",
