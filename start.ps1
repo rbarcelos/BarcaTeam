@@ -14,7 +14,7 @@ param(
 
 # Support --reset (double-dash) in addition to -Reset (PowerShell native)
 if ($Repos -contains '--reset') {
-    $Reset = $true
+    $Reset = $truepull
     $Repos = @($Repos | Where-Object { $_ -ne '--reset' })
 }
 

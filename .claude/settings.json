@@ -1,12 +1,10 @@
 {
   "env": {
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+    "CLAUDE_CODE_SPAWN_BACKEND": "tmux"
   },
   "includeCoAuthoredBy": true,
-  "enabledPlugins": {
-    "rust-analyzer-lsp@claude-plugins-official": true
-  },
-  "effortLevel": "max",
+  "effortLevel": "high",
   "spawnBackend": "direct-tmux",
   "permissions": {
     "allow": [
@@ -73,7 +71,7 @@
       "Bash(uvicorn *)",
       "Bash(docker *)"
     ],
-    "defaultMode": "acceptEdits"
+    "defaultMode": "bypassPermissions"
   },
   "model": "opus",
   "teammateMode": "tmux",

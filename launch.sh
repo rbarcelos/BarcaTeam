@@ -48,12 +48,46 @@ if tmux has-session -t "$SESSION" 2>/dev/null; then
     exit 0
 fi
 
+# ── Create session ────────────────────────────────────────────────────────────
 NVM_INIT="export NVM_DIR=\"\$HOME/.nvm\" && [ -s \"\$NVM_DIR/nvm.sh\" ] && source \"\$NVM_DIR/nvm.sh\" && nvm use --lts --silent"
 
+tmux new-session -d -s "$SESSION" -n "lead"
+
+# Propagate agent teams env var to every pane spawned in this session
+tmux set-environment -t "$SESSION" CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS 1
+
+# ── Global options ────────────────────────────────────────────────────────────
 tmux set-option -g mouse on
 tmux set-option -g history-limit 200000
 
-tmux new-session -d -s "$SESSION" -n "lead"
-tmux send-keys -t "$SESSION:lead" "$NVM_INIT && cd '$TEAM_DIR' && claude $ADD_DIRS" C-m
+# ── Lead window — Claude orchestrator ────────────────────────────────────────
+tmux send-keys -t "$SESSION:lead.0" "$NVM_INIT && cd '$TEAM_DIR' && claude $ADD_DIRS" C-m
 
+# ── Agents window — pre-created panes for teammate sessions ──────────────────
+# Claude will spawn agent panes here automatically via teamMateMode=tmux
+tmux new-window -t "$SESSION" -n "agents"
+tmux send-keys -t "$SESSION:agents.0" "echo '=== agent panes will appear here ==='" C-m
+
+# ── One window per repo ───────────────────────────────────────────────────────
+for repo_path in "${REPO_PATHS[@]}"; do
+    repo_name=$(basename "$repo_path")
+
+    tmux new-window -t "$SESSION" -n "$repo_name"
+
+    # Pane 0: logs (full left column)
+    tmux send-keys -t "$SESSION:$repo_name.0" "$NVM_INIT && cd '$repo_path' && echo '=== logs / dev server ==='" C-m
+
+    # Pane 1: tests (top right)
+    tmux split-window -h -t "$SESSION:$repo_name"
+    tmux send-keys -t "$SESSION:$repo_name.1" "$NVM_INIT && cd '$repo_path' && echo '=== tests / watch ==='" C-m
+
+    # Pane 2: ops shell (bottom right)
+    tmux split-window -v -t "$SESSION:$repo_name.1"
+    tmux send-keys -t "$SESSION:$repo_name.2" "$NVM_INIT && cd '$repo_path' && echo '=== ops / git ==='" C-m
+
+    tmux select-pane -t "$SESSION:$repo_name.0"
+done
+
+# Focus back on lead window
+tmux select-window -t "$SESSION:lead"
 tmux attach -t "$SESSION"
