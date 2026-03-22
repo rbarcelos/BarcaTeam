@@ -9,12 +9,14 @@ tools:
   - Glob
   - Bash
   - Agent(explore)
+  - AskUserQuestion
 memory: user
 skills:
   - context-discovery
   - document-templates
   - issue-templates
   - issue-triage
+  - ask-user-question
   - team-handoff
 ---
 

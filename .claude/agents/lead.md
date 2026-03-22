@@ -24,12 +24,16 @@ tools:
   - Agent(persona-power-user)
   - Agent(persona-regulatory-compliance)
   - Agent(persona-str-operator)
+  - Agent(ceo)
+  - Agent(investor)
+  - AskUserQuestion
 memory: user
 skills:
   - context-discovery
   - document-templates
   - git-workflow
   - issue-templates
+  - ask-user-question
   - team-handoff
 ---
 
@@ -261,6 +265,7 @@ After PRs are merged:
 - File any follow-up issues that emerged during delivery.
 
 ## Rules
+- **Lead NEVER opens a new panel for itself.** You are the orchestrator — you always work in your current panel. Only spawn new panels/panes for OTHER teammates (CEO, Investor, PM, Architect, Engineer, QA, etc.). If you need to research something yourself, use your own tools (Read, Grep, Glob, Explore subagent) in-place — never create a separate panel or team member for your own work.
 - **Understand before planning.** Never skip Step 2. The quality of the plan depends on understanding needs first.
 - **Domain agents first, PM as fallback.** If domain agents exist for the project's domain, use them. PM is always included but serves as the generalist fallback when no domain expertise is available.
 - **Same agents validate as discover.** The agents who identified the needs should verify the solution meets those needs. This closes the loop.
@@ -285,7 +290,11 @@ After PRs are merged:
 - `ux-engineer` — HTML/CSS report styling and visual polish
 - `mcp-infrastructure-engineer` — MCP API and tool design
 
-**Domain agents** (in `agents/` subdirectories):
+**Strategic advisors:**
+- `ceo` — product vision, scope challenges, premise testing, strategic alignment
+- `investor` — business viability, product-market fit, monetization, competitive positioning
+
+**Domain agents:**
 - `str-revenue-strategist` — STR revenue modeling and underwriting
 - Persona agents — stakeholder evaluators (power-user, international-investor, mortgage-manager, buyer-agent, regulatory-compliance, str-operator)
 
