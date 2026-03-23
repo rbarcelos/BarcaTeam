@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "claude-ping": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "github:rbarcelos/claude-ping"]
+    }
+  }
+}
