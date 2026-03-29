@@ -95,49 +95,94 @@ function Append-ManagedBlock {
 }
 
 function Upgrade-Psmux {
-    $used = $null
+    $installDir = Join-Path $env:LOCALAPPDATA "psmux"
 
-    if (Test-Cmd winget) {
+    # Fetch latest release metadata from GitHub
+    Write-Host "Fetching latest psmux release from GitHub..." -ForegroundColor Cyan
+    try {
+        $release = Invoke-RestMethod -Uri "https://api.github.com/repos/psmux/psmux/releases/latest" -Headers @{ "User-Agent" = "psmux-upgrader" }
+    } catch {
+        Write-Error "Failed to query GitHub releases: $($_.Exception.Message)"
+        return
+    }
+
+    $tag = $release.tag_name
+    Write-Host "Latest release: $tag" -ForegroundColor Cyan
+
+    # Check currently installed version
+    if (Test-Cmd psmux) {
         try {
-            & winget upgrade --name psmux --exact --silent --accept-source-agreements --accept-package-agreements | Out-Host
-            $used = "winget"
+            $currentRaw = & psmux -V 2>&1
+            $currentVer = ($currentRaw -replace '[^0-9.]','').Trim()
+            $latestVer  = ($tag -replace '[^0-9.]','').Trim()
+            if ($currentVer -eq $latestVer) {
+                Write-Host "psmux is already at $tag — nothing to do." -ForegroundColor Green
+                return
+            }
+            Write-Host "Upgrading psmux from v$currentVer to $tag" -ForegroundColor Yellow
         } catch {
-            Write-Warning "winget upgrade failed: $($_.Exception.Message)"
+            Write-Host "Could not determine current version, proceeding with install." -ForegroundColor Yellow
         }
     }
 
-    if (-not $used -and (Test-Cmd scoop)) {
-        try {
-            & scoop update psmux | Out-Host
-            $used = "scoop"
-        } catch {
-            Write-Warning "scoop update failed: $($_.Exception.Message)"
-        }
+    # Pick the right asset for the current architecture
+    $arch = switch ($env:PROCESSOR_ARCHITECTURE) {
+        "ARM64" { "arm64" }
+        "x86"   { "x86"   }
+        default { "x64"   }
+    }
+    $assetName = "psmux-$tag-windows-$arch.zip"
+    $asset = $release.assets | Where-Object { $_.name -eq $assetName }
+
+    if (-not $asset) {
+        Write-Error "No matching asset '$assetName' found in release $tag. Available: $($release.assets.name -join ', ')"
+        return
     }
 
-    if (-not $used -and (Test-Cmd choco)) {
-        try {
-            & choco upgrade psmux -y | Out-Host
-            $used = "choco"
-        } catch {
-            Write-Warning "choco upgrade failed: $($_.Exception.Message)"
-        }
+    # Download
+    $tempZip = Join-Path $env:TEMP $assetName
+    Write-Host "Downloading $($asset.name)..." -ForegroundColor Cyan
+    try {
+        Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $tempZip -UseBasicParsing
+    } catch {
+        Write-Error "Download failed: $($_.Exception.Message)"
+        return
     }
 
-    if (-not $used -and (Test-Cmd cargo)) {
-        try {
-            & cargo install psmux --locked --force | Out-Host
-            $used = "cargo"
-        } catch {
-            Write-Warning "cargo install failed: $($_.Exception.Message)"
-        }
+    # Stop psmux server so the exe isn't locked
+    if (Test-Cmd psmux) {
+        try { & psmux kill-server 2>$null } catch {}
+        Start-Sleep -Milliseconds 500
     }
 
-    if (-not $used) {
-        Write-Warning "No supported package manager found. Skipping binary upgrade."
-    } else {
-        Write-Host "Binary upgrade path used: $used" -ForegroundColor Green
+    # Remove old install — if exe is still locked, rename it for cleanup on next reboot
+    if (Test-Path $installDir) {
+        try {
+            Remove-Item -Path $installDir -Recurse -Force
+        } catch {
+            Write-Host "Could not remove $installDir (file locked). Renaming old exe..." -ForegroundColor Yellow
+            $oldExe = Join-Path $installDir "psmux.exe"
+            if (Test-Path $oldExe) {
+                $tombstone = "$oldExe.old"
+                if (Test-Path $tombstone) { Remove-Item $tombstone -Force -ErrorAction SilentlyContinue }
+                Rename-Item -Path $oldExe -NewName "psmux.exe.old" -Force
+            }
+        }
     }
+    New-Item -ItemType Directory -Path $installDir -Force | Out-Null
+    Write-Host "Extracting to $installDir..." -ForegroundColor Cyan
+    Expand-Archive -Path $tempZip -DestinationPath $installDir -Force
+    Remove-Item $tempZip -Force -ErrorAction SilentlyContinue
+
+    # Ensure installDir is on the user PATH
+    $userPath = [Environment]::GetEnvironmentVariable("PATH", "User")
+    if ($userPath -notlike "*$installDir*") {
+        [Environment]::SetEnvironmentVariable("PATH", "$installDir;$userPath", "User")
+        $env:PATH = "$installDir;$env:PATH"
+        Write-Host "Added $installDir to user PATH." -ForegroundColor Yellow
+    }
+
+    Write-Host "psmux $tag installed successfully." -ForegroundColor Green
 }
 
 # 1) Upgrade psmux binary
@@ -192,7 +237,7 @@ $capabilities = @(
     @{
         Name  = "history-limit"
         Lines = @(
-            "set -g history-limit 5000"
+            "set -g history-limit 200000"
         )
     },
     @{

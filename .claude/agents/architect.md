@@ -78,6 +78,7 @@ Document significant decisions using ADR format:
 - Prefer minimal surface area changes.
 - Always ground decisions in existing patterns — scan the codebase FIRST.
 - Document every significant decision with rationale via ADRs.
+- **ARCHITECTURE.md is the high-level architecture reference, not the complete source of truth.** It captures system-wide patterns, technology choices, cross-cutting concerns, and component boundaries. Feature-specific design details (data models, API contracts, UI specs, ADRs) belong in **dedicated design spec documents** under `docs/capabilities/<cap_slug>/` (e.g., `ARCHITECTURE.md`, `EXECUTION_PLAN.md`, or feature-specific design docs). GH issues MUST reference at least one design spec file (`see docs/capabilities/foo/ARCHITECTURE.md §X` or `see docs/capabilities/foo/DESIGN_PLAN.md`). Design decisions posted on GH issues without a corresponding spec file reference are incomplete — always write the detail into a spec doc first, then reference it from the issue. Engineers should never need to reconcile multiple sources or hunt through GH comments for design decisions.
 
 ## How You Work
 Use subagents for parallel analysis:
@@ -95,3 +96,4 @@ Follow the **team-handoff** skill protocol.
 ## Outputs
 Write `docs/capabilities/<cap_slug>/ARCHITECTURE.md` using the template.
 Include ADRs for all non-obvious decisions.
+- When reviewing GH issues, **write feature-specific design details into a spec doc first** (under `docs/capabilities/<cap_slug>/`), then comment on the issue with a reference to that doc. High-level architectural changes that affect the whole system should also be reflected in the capability's ARCHITECTURE.md. Never leave design decisions only in GH comments — they get lost and create conflicting sources of truth.

@@ -14,7 +14,7 @@ param(
 
 # Support --reset (double-dash) in addition to -Reset (PowerShell native)
 if ($Repos -contains '--reset') {
-    $Reset = $truepull
+    $Reset = $true
     $Repos = @($Repos | Where-Object { $_ -ne '--reset' })
 }
 
@@ -114,10 +114,34 @@ if ($Reset) { Write-Host " Mode    : --reset (existing session killed)" }
 Write-Host ""
 
 psmux new-session -d -s $Session -n lead
+
+# Apply managed config (Claude-specific settings, env-shim, focus-events, etc.)
+$managedConf = Join-Path $HOME ".config\psmux\capabilities.managed.conf"
+if (Test-Path $managedConf) {
+    $managedUnix = $managedConf -replace '\\','/'
+    psmux source-file "$managedUnix" 2>$null
+}
+
+# Apply user tmux.conf if present
+$tmuxConf = Join-Path $HOME ".tmux.conf"
+if (Test-Path $tmuxConf) {
+    $tmuxConfUnix = $tmuxConf -replace '\\','/'
+    psmux source-file "$tmuxConfUnix" 2>$null
+}
+
+# Ensure critical settings even if configs are missing
 psmux set-option -g mouse on
 psmux set-option -g history-limit 200000
+psmux set-option -g remain-on-exit on
+psmux set-option -g pane-border-status top
+psmux set-option -g pane-border-format " #{pane_index}: #{pane_title} "
+
+# Set tiled layout for better agent visibility
+psmux select-layout -t "${Session}:lead" tiled 2>$null
 
 $launchCmd = "cd `"$teamDir`" && claude $addDirFlags"
-psmux send-keys -t "${Session}:lead" "$launchCmd" Enter
+# Double backslashes so psmux send-keys doesn't swallow them as escape chars
+$escapedCmd = $launchCmd -replace '\\', '\\'
+psmux send-keys -t "${Session}:lead" "$escapedCmd" Enter
 
 psmux attach -t $Session

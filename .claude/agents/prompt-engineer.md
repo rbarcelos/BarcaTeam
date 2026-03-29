@@ -13,9 +13,11 @@ tools:
 memory: user
 skills:
   - context-discovery
+  - document-templates
   - engineer-workflow
   - code-review-checklist
   - git-workflow
+  - issue-templates
   - team-handoff
 ---
 

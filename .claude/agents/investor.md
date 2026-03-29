@@ -6,8 +6,6 @@ tools:
   - Read
   - Grep
   - Glob
-  - Write
-  - Edit
   - AskUserQuestion
 memory: user
 skills:

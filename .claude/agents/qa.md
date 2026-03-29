@@ -13,6 +13,7 @@ memory: user
 skills:
   - context-discovery
   - document-templates
+  - code-review-checklist
   - issue-templates
   - team-handoff
 ---
