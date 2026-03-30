@@ -1,0 +1,119 @@
+# Canonical Finding Schema — Autonomous Improvement Loop
+#
+# Every problem found by persona, UX critic, or feedback diagnosis
+# is normalized into this format before triage and prioritization.
+#
+# Used by: improvement-loop skill, triage-judge (PM), feedback CLI
+
+finding:
+  type: object
+  required: [id, title, problem_statement, severity, confidence, source_agent, status]
+  properties:
+    # --- Identity ---
+    id:
+      type: string
+      description: Unique identifier (uuid4 or feedback_id)
+    dedupe_key:
+      type: string
+      description: >
+        Fingerprint for dedup. Format: "{component}:{category}:{short_signature}".
+        Example: "decision_surface:calculation_error:coc_double_multiply"
+
+    # --- Problem ---
+    title:
+      type: string
+      description: One-line summary (< 80 chars)
+    problem_statement:
+      type: string
+      description: What's wrong, from the user's perspective
+    evidence:
+      type: array
+      items:
+        type: string
+      description: Concrete observations — screenshots, data values, user quotes
+    affected_component:
+      type: string
+      enum: [earnings_card, risk_card, regulations_card, financing_card, decision_surface, scenario_card, chat_message, overview_card, report_section, navigation, onboarding, general_ux]
+    affected_flow:
+      type: string
+      description: User flow impacted (e.g., "property lookup → earnings review")
+
+    # --- Impact Assessment ---
+    severity:
+      type: string
+      enum: [critical, high, medium, low]
+      description: >
+        critical: data wrong or misleading, user makes bad decision
+        high: feature broken or confusing, blocks flow
+        medium: friction, unclear, suboptimal but usable
+        low: polish, minor annoyance
+    confidence:
+      type: number
+      minimum: 0.0
+      maximum: 1.0
+      description: How confident the agent is this is a real problem
+    user_impact:
+      type: string
+      enum: [data_trust, decision_quality, task_completion, comprehension, efficiency, aesthetics]
+    business_impact:
+      type: string
+      enum: [churn_risk, support_cost, conversion, retention, brand, none]
+
+    # --- Scoring (filled by triage judge) ---
+    rice_score:
+      type: number
+      description: "Reach × Impact × Confidence / Effort"
+    reach:
+      type: number
+      minimum: 1
+      maximum: 10
+      description: "How many users hit this? 10=everyone, 1=edge case"
+    impact:
+      type: number
+      minimum: 1
+      maximum: 10
+      description: "How bad is it? 10=misleading data, 1=cosmetic"
+    effort:
+      type: number
+      minimum: 1
+      maximum: 10
+      description: "Implementation cost. 1=one-liner, 10=multi-week refactor"
+
+    # --- Fix ---
+    suggested_fix:
+      type: string
+      description: Hypothesis for how to fix it
+    acceptance_criteria:
+      type: array
+      items:
+        type: string
+      description: How to verify the fix works
+    affected_files:
+      type: array
+      items:
+        type: string
+      description: Files likely involved in the fix
+
+    # --- Provenance ---
+    source_agent:
+      type: string
+      description: Agent that found this (e.g., "persona-power-user", "ux-critic", "feedback-db")
+    impacted_persona:
+      type: string
+      description: Primary persona affected
+    feedback_ids:
+      type: array
+      items:
+        type: string
+      description: Linked feedback_id(s) from thumbs-down DB
+    gh_issue_number:
+      type: integer
+      description: Linked GitHub issue (filled after triage)
+
+    # --- Lifecycle ---
+    status:
+      type: string
+      enum: [raw, triaged, planned, in_progress, fixed, verified, wont_fix]
+    created_at:
+      type: string
+      format: date-time

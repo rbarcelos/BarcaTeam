@@ -109,6 +109,39 @@ tmux send-keys -t barcateam:0.N "\$env:CLAUDECODE='1'; \$env:CLAUDE_CODE_EXPERIM
   - Read `.github/copilot-instructions.md` for project-specific rules
 - These repo-local standards override barcaTeam defaults when working in that repo.
 
+## Improvement Loop
+
+The `/improvement-loop` skill runs an autonomous product improvement cycle. See `.claude/skills/improvement-loop/SKILL.md` for the full 10-step procedure.
+
+**When the user asks to "review feedback", "triage feedback", "find and fix issues", or "run the improvement loop":**
+1. Triage thumbs-down feedback from the DB (diagnose pending → file GH issues)
+2. Confirm open GH issues are still valid (close already-fixed ones)
+3. Optionally gather new signals (UX critic, persona agents)
+4. Score and rank all findings by RICE
+5. Fix, verify, learn
+
+**Key principle:** Persona and UX critic agents are **signal generators only**. They produce findings. The lead/PM scores and ranks. Engineers fix. QA verifies.
+
+## Safe Autonomy Policy
+
+### Autonomous (no human gate needed)
+- Identify issues, generate structured findings
+- Query feedback DB, diagnose entries, file GH issues
+- Deduplicate and rank by RICE score
+- Investigate and fix code issues
+- Run tests, linters, validation
+- Commit and merge to main
+- Update memory, docs, feedback DB status
+- Close GH issues when fixes are verified
+- Send WhatsApp summary
+
+### Human-gated (requires explicit approval)
+- Auth/security-sensitive changes
+- Database schema migrations
+- New external dependencies or infrastructure costs
+- Broad product strategy pivots
+- Deleting user data or production databases
+
 ## Skills
 
 Agents reference skills from `.claude/skills/` for shared procedures.

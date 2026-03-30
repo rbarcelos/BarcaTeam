@@ -27,6 +27,7 @@ tools:
   - Agent(ceo)
   - Agent(investor)
   - Agent(marketing-brand-strategist)
+  - Agent(ux-critic)
   - AskUserQuestion
 memory: user
 skills:
@@ -38,6 +39,7 @@ skills:
   - team-handoff
   - session-checkpoint
   - capability-init
+  - improvement-loop
 ---
 
 # BarcaTeam Lead — Orchestrator
