@@ -61,16 +61,20 @@ This prevents wasting effort fixing issues that are already resolved.
 
 ### STEP 3: GATHER NEW SIGNALS (optional, if deep evaluation requested)
 
-Run additional signal generators in parallel:
+**MANDATORY: Use TeamCreate with visible tmux panes** for all signal-gathering agents.
+
+Create a team with the following agents spawned in parallel panes:
 
 **Source A — UX Critic agent:**
-Spawn `ux-critic` to evaluate the product frontend and backend surfaces.
+Spawn `ux-critic` in its own pane to evaluate the product frontend and backend surfaces.
 Input: product-context.md + frontend code + module data models.
 Output: structured findings per finding schema.
 
 **Source B — Persona agents:**
-Spawn 2-3 relevant persona agents to evaluate from stakeholder perspective.
+Spawn 2-3 relevant persona agents in parallel panes to evaluate from stakeholder perspective.
 Output: structured findings per finding schema.
+
+Follow the Psmux Agent Launch Bug workaround from CLAUDE.md — after `TeamCreate`, use `tmux send-keys` to manually start each agent.
 
 Skip this step if the user only asked to triage and fix existing feedback/issues.
 
@@ -127,19 +131,26 @@ Pick the batch for this cycle:
 
 ### STEP 8: FIX
 
-For each selected issue:
-1. **Investigate** — read the relevant code, understand the root cause
-2. **Plan** — determine exact files and approach
-3. **Implement** — make code changes, add tests
-4. **Commit** to main with `fix(<scope>): <description> (#issue)`
-5. **Close** the GH issue
+**MANDATORY: Use TeamCreate with visible tmux panes.** Never use background Agent subagents — the user must be able to watch progress in real-time.
 
-Use worktree isolation when fixing multiple issues in parallel.
-Spawn engineer agents for parallelism when there are 3+ independent issues.
+For each selected issue group:
+1. **Create a team** via `TeamCreate` with one engineer agent per independent issue (or issue group)
+2. Each engineer agent:
+   - **Investigate** — read the relevant code, understand the root cause
+   - **Plan** — determine exact files and approach
+   - **Implement** — make code changes, add tests
+   - **Commit** to main with `fix(<scope>): <description> (#issue)`
+   - **Close** the GH issue via `gh issue close`
+3. **Follow the Psmux Agent Launch Bug workaround** from CLAUDE.md — after `TeamCreate`, use `tmux send-keys` to manually start each agent
+4. **Monitor panes** — verify agents are alive with `tmux capture-pane`, respawn if needed
+
+For a single issue, the lead may fix it directly without spawning a team.
 
 ---
 
 ### STEP 9: VERIFY
+
+**Use TeamCreate** to spawn QA agents in visible panes for verification:
 
 **QA check** each fix:
 - Does the original user problem no longer occur?
@@ -204,6 +215,7 @@ At the end of the loop, produce a summary:
 
 ## Rules
 
+- **Always use TeamCreate with visible tmux panes** for agent work (Steps 3, 8, 9) — never use background Agent subagents
 - Persona and UX critic agents are **signal generators only** — they never decide priority
 - The lead/PM scores and ranks — this is the authority for "what to fix next"
 - Always **confirm GH issues are still valid** before working on them — don't fix already-fixed issues
