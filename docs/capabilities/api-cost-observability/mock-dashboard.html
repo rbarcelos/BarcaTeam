@@ -1,0 +1,1813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WhatIfInvestments.ai — API Call Inspector</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Sora:wght@600;700&display=swap" rel="stylesheet">
+<style>
+/* ─── DESIGN TOKENS ──────────────────────────────────────────── */
+:root {
+  /* Backgrounds */
+  --bg-base:          #0d1117;
+  --bg-surface:       #161b22;
+  --bg-elevated:      #1c2330;
+  --bg-hover:         #21293a;
+  --bg-input:         #0d1117;
+  --bg-drawer:        #111520;
+
+  /* Borders */
+  --border-subtle:    rgba(139,153,175,0.10);
+  --border-default:   rgba(139,153,175,0.18);
+  --border-strong:    rgba(139,153,175,0.32);
+
+  /* Text */
+  --text-primary:     #e6edf3;
+  --text-secondary:   #8b99af;
+  --text-tertiary:    #6e7d8f;
+  --text-muted:       #3d4a5c;
+
+  /* Accents */
+  --accent-blue:      #2f81f7;
+  --accent-blue-dim:  rgba(47,129,247,0.15);
+  --accent-amber:     #d4a017;
+  --accent-amber-dim: rgba(212,160,23,0.14);
+  --accent-green:     #10b981;
+  --accent-green-dim: rgba(16,185,129,0.14);
+  --accent-red:       #ef4444;
+  --accent-red-dim:   rgba(239,68,68,0.14);
+  --accent-orange:    #f59e0b;
+  --accent-orange-dim:rgba(245,158,11,0.14);
+
+  /* Cache status pill colors */
+  --cache-hit:        #10b981;
+  --cache-hit-bg:     rgba(16,185,129,0.12);
+  --cache-miss:       #f59e0b;
+  --cache-miss-bg:    rgba(245,158,11,0.12);
+  --cache-bypass:     #6e7d8f;
+  --cache-bypass-bg:  rgba(110,125,143,0.12);
+  --cache-stale:      #f97316;
+  --cache-stale-bg:   rgba(249,115,22,0.12);
+
+  /* Provider colors (for timeline waterfall) */
+  --color-openai:     #2f81f7;
+  --color-rentcast:   #10b981;
+  --color-zillow:     #a78bfa;
+
+  /* Fonts */
+  --font-sans:        'DM Sans', 'Segoe UI', system-ui, sans-serif;
+  --font-mono:        'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  --font-display:     'Sora', 'DM Sans', sans-serif;
+
+  /* Spacing */
+  --radius-sm:        4px;
+  --radius-md:        8px;
+  --radius-lg:        12px;
+  --radius-xl:        16px;
+  --radius-pill:      999px;
+
+  /* Shadows */
+  --shadow-sm:        0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md:        0 4px 16px rgba(0,0,0,0.5);
+  --shadow-lg:        0 12px 40px rgba(0,0,0,0.6);
+  --shadow-popover:   0 8px 32px rgba(0,0,0,0.7), 0 0 0 1px rgba(139,153,175,0.12);
+
+  /* Layout */
+  --header-h:         56px;
+  --drawer-w:         62vw;
+  --popover-w:        480px;
+}
+
+/* ─── RESET ──────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  height: 100%;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(139,153,175,0.18); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(139,153,175,0.35); }
+
+/* ─── MOCK APP SHELL ─────────────────────────────────────────── */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app-header {
+  height: var(--header-h);
+  min-height: var(--header-h);
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 16px;
+  z-index: 50;
+  position: relative;
+  flex-shrink: 0;
+}
+.app-header::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(47,129,247,0.5), rgba(16,185,129,0.3), transparent);
+}
+
+.logo {
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+  font-family: var(--font-display);
+  font-size: 15px; font-weight: 700; color: var(--text-primary);
+  letter-spacing: -0.3px;
+}
+.logo-mark {
+  width: 28px; height: 28px;
+  background: linear-gradient(135deg, #2f81f7 0%, #1a5fc8 100%);
+  border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 800; color: white;
+  box-shadow: 0 2px 8px rgba(47,129,247,0.4);
+}
+.logo span { color: var(--accent-green); }
+
+.header-address {
+  flex: 1;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; color: var(--text-secondary);
+}
+.header-address-icon { color: var(--text-tertiary); }
+.header-address-text {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.header-right {
+  display: flex; align-items: center; gap: 10px;
+  margin-left: auto;
+}
+
+/* Usage Badge */
+.usage-badge {
+  display: flex; align-items: center; gap: 7px;
+  padding: 5px 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+  user-select: none;
+}
+.usage-badge:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
+}
+.usage-badge.active {
+  border-color: rgba(16,185,129,0.4);
+  background: rgba(16,185,129,0.06);
+  box-shadow: 0 0 0 2px rgba(16,185,129,0.12);
+}
+.badge-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent-green);
+  box-shadow: 0 0 6px rgba(16,185,129,0.6);
+  flex-shrink: 0;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; box-shadow: 0 0 6px rgba(16,185,129,0.6); }
+  50% { opacity: 0.6; box-shadow: 0 0 10px rgba(16,185,129,0.3); }
+}
+.badge-stat {
+  font-family: var(--font-mono);
+  font-size: 11px; font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.badge-stat strong { color: var(--text-primary); font-weight: 600; }
+.badge-divider {
+  width: 1px; height: 12px;
+  background: var(--border-default);
+}
+.badge-cost {
+  font-family: var(--font-mono);
+  font-size: 11px; font-weight: 600;
+  color: var(--accent-green);
+}
+
+/* ─── CONTENT AREA ───────────────────────────────────────────── */
+.content-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 32px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Mock chat content (background context) */
+.mock-chat {
+  display: flex; flex-direction: column; gap: 16px;
+  max-width: 720px;
+  opacity: 0.4;
+  pointer-events: none;
+  user-select: none;
+}
+.chat-msg {
+  display: flex; align-items: flex-start; gap: 12px;
+}
+.chat-msg.user { flex-direction: row-reverse; }
+.chat-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; flex-shrink: 0;
+}
+.chat-avatar.agent {
+  background: linear-gradient(135deg, #2f81f7, #10b981);
+  color: white;
+}
+.chat-avatar.user-av {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  color: var(--text-secondary);
+}
+.chat-bubble {
+  max-width: 560px;
+  padding: 10px 14px;
+  border-radius: var(--radius-lg);
+  font-size: 13px; line-height: 1.6;
+}
+.chat-bubble.agent-bubble {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+}
+.chat-bubble.user-bubble {
+  background: #1d3d6b;
+  border: 1px solid rgba(47,129,247,0.25);
+}
+
+/* ─── LEVEL 1: POPOVER ───────────────────────────────────────── */
+.popover-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  pointer-events: none;
+}
+.popover-overlay.visible { pointer-events: auto; }
+
+.popover {
+  position: fixed;
+  top: calc(var(--header-h) + 8px);
+  right: 20px;
+  width: var(--popover-w);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-popover);
+  overflow: hidden;
+  z-index: 210;
+  transform-origin: top right;
+  transform: scale(0.94) translateY(-8px);
+  opacity: 0;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.18s ease;
+  pointer-events: none;
+}
+.popover.visible {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Popover header */
+.popover-header {
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.popover-title {
+  font-family: var(--font-sans);
+  font-size: 12px; font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.popover-session-id {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* Summary row */
+.summary-row {
+  padding: 14px 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.summary-stat {
+  display: flex; flex-direction: column; gap: 3px;
+}
+.summary-stat-label {
+  font-size: 10px; font-weight: 500;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.summary-stat-value {
+  font-family: var(--font-mono);
+  font-size: 16px; font-weight: 600;
+  color: var(--text-primary);
+}
+.summary-stat-value.green { color: var(--accent-green); }
+.summary-stat-value.amber { color: var(--accent-amber); }
+
+/* Cache hit bar */
+.cache-bar-wrap {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.cache-bar-label {
+  display: flex; justify-content: space-between;
+  margin-bottom: 6px;
+}
+.cache-bar-title {
+  font-size: 11px; font-weight: 500; color: var(--text-tertiary);
+}
+.cache-legend {
+  display: flex; gap: 10px;
+}
+.cache-legend-item {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 10px; color: var(--text-muted);
+}
+.cache-legend-dot {
+  width: 7px; height: 7px; border-radius: 2px;
+}
+.cache-bar {
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--bg-elevated);
+  display: flex;
+}
+.cache-bar-segment {
+  height: 100%;
+  transition: width 0.4s ease;
+}
+.cache-bar-segment.hit  { background: var(--cache-hit); }
+.cache-bar-segment.miss { background: var(--cache-miss); }
+.cache-bar-segment.bypass { background: var(--cache-bypass); }
+.cache-bar-segment.stale { background: var(--cache-stale); }
+
+/* Accordion sections */
+.accordion-section {
+  border-bottom: 1px solid var(--border-subtle);
+}
+.accordion-toggle {
+  width: 100%;
+  padding: 10px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer;
+  background: none; border: none;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  transition: color 0.15s;
+}
+.accordion-toggle:hover { color: var(--text-primary); }
+.accordion-chevron {
+  transition: transform 0.2s ease;
+  color: var(--text-muted);
+}
+.accordion-toggle.open .accordion-chevron { transform: rotate(180deg); }
+.accordion-body {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.accordion-body.open { max-height: 400px; }
+
+/* Popover tables */
+.popover-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+}
+.popover-table th {
+  padding: 7px 16px 6px;
+  text-align: left;
+  font-size: 10px; font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase; letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+.popover-table td {
+  padding: 7px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+}
+.popover-table tr:last-child td { border-bottom: none; }
+.popover-table tr:hover td { background: rgba(255,255,255,0.02); }
+.popover-table td.mono {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.popover-table td.primary { color: var(--text-primary); font-weight: 500; }
+
+/* Provider badge */
+.provider-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 10px; font-weight: 500;
+}
+.provider-badge.openai { background: rgba(47,129,247,0.14); color: #6badf7; }
+.provider-badge.rentcast { background: rgba(16,185,129,0.12); color: #34d399; }
+.provider-badge.zillow { background: rgba(167,139,250,0.12); color: #c4b5fd; }
+
+/* Popover footer */
+.popover-footer {
+  padding: 11px 16px;
+  display: flex; justify-content: flex-end;
+}
+.show-calllog-btn {
+  background: none; border: none;
+  font-family: var(--font-sans);
+  font-size: 12px; font-weight: 500;
+  color: var(--accent-blue);
+  cursor: pointer;
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 0;
+  transition: color 0.15s;
+}
+.show-calllog-btn:hover { color: #6badf7; }
+.show-calllog-btn svg { transition: transform 0.2s ease; }
+.show-calllog-btn:hover svg { transform: translateX(3px); }
+
+/* ─── LEVEL 2: DRAWER ────────────────────────────────────────── */
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0);
+  z-index: 300;
+  pointer-events: none;
+  transition: background 0.3s ease;
+}
+.drawer-backdrop.visible {
+  background: rgba(0,0,0,0.55);
+  pointer-events: auto;
+}
+
+.drawer {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: var(--drawer-w);
+  background: var(--bg-drawer);
+  border-left: 1px solid var(--border-default);
+  z-index: 310;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: -12px 0 48px rgba(0,0,0,0.6);
+}
+.drawer.visible { transform: translateX(0); }
+
+/* Drawer header */
+.drawer-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex; align-items: flex-start;
+  gap: 16px;
+  flex-shrink: 0;
+}
+.drawer-header-info { flex: 1; }
+.drawer-header-title {
+  font-family: var(--font-display);
+  font-size: 15px; font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.2px;
+  margin-bottom: 4px;
+}
+.drawer-header-meta {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+}
+.drawer-meta-item {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; color: var(--text-tertiary);
+}
+.drawer-meta-value {
+  font-family: var(--font-mono);
+  font-size: 11px; font-weight: 500; color: var(--text-secondary);
+}
+.drawer-meta-value.cost { color: var(--accent-green); }
+.drawer-close {
+  background: none; border: none;
+  width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition: background 0.15s, color 0.15s;
+}
+.drawer-close:hover { background: var(--bg-elevated); color: var(--text-primary); }
+
+/* Waterfall timeline */
+.waterfall-wrap {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+.waterfall-label {
+  font-size: 10px; font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  margin-bottom: 8px;
+  display: flex; justify-content: space-between;
+}
+.waterfall-timeline {
+  position: relative;
+  height: 28px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.waterfall-block {
+  position: absolute;
+  top: 4px;
+  height: 20px;
+  border-radius: 3px;
+  opacity: 0.85;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  display: flex; align-items: center;
+  overflow: hidden;
+}
+.waterfall-block:hover { opacity: 1; z-index: 2; }
+.waterfall-block.openai { background: var(--color-openai); }
+.waterfall-block.rentcast { background: var(--color-rentcast); }
+.waterfall-block.zillow { background: var(--color-zillow); }
+.waterfall-block.hit { opacity: 0.4; }
+
+/* Time ticks */
+.waterfall-ticks {
+  display: flex;
+  margin-top: 4px;
+  position: relative;
+}
+.waterfall-tick {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 9px; color: var(--text-muted);
+  text-align: center;
+}
+.waterfall-tick:first-child { text-align: left; }
+.waterfall-tick:last-child { text-align: right; }
+
+/* Filter bar */
+.filter-bar {
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  flex-shrink: 0;
+}
+.filter-label {
+  font-size: 10px; font-weight: 600; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  margin-right: 2px;
+}
+.filter-chip {
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono);
+  font-size: 10px; font-weight: 500;
+  border: 1px solid var(--border-default);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.filter-chip:hover { border-color: var(--border-strong); color: var(--text-primary); }
+.filter-chip.active {
+  border-color: rgba(16,185,129,0.4);
+  background: rgba(16,185,129,0.1);
+  color: var(--accent-green);
+}
+.filter-chip.active.openai-chip {
+  border-color: rgba(47,129,247,0.4);
+  background: rgba(47,129,247,0.1);
+  color: var(--accent-blue);
+}
+.filter-chip.active.rentcast-chip {
+  border-color: rgba(16,185,129,0.4);
+  background: rgba(16,185,129,0.1);
+  color: var(--accent-green);
+}
+.filter-chip.active.zillow-chip {
+  border-color: rgba(167,139,250,0.4);
+  background: rgba(167,139,250,0.1);
+  color: #c4b5fd;
+}
+.filter-separator { width: 1px; height: 16px; background: var(--border-subtle); margin: 0 4px; }
+
+/* Call log table */
+.call-log-wrap {
+  flex: 1;
+  overflow-y: auto;
+}
+.call-log-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.call-log-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-drawer);
+  padding: 8px 14px 8px;
+  text-align: left;
+  font-size: 10px; font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+  z-index: 5;
+}
+.call-log-table thead th::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; left: 0; right: 0; height: 1px;
+  background: var(--border-subtle);
+}
+
+.call-log-row {
+  cursor: pointer;
+  transition: background 0.1s;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.call-log-row:hover { background: rgba(255,255,255,0.025); }
+.call-log-row.expanded { background: rgba(47,129,247,0.04); }
+.call-log-row:last-child { border-bottom: none; }
+
+.call-log-row td {
+  padding: 8px 14px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.call-log-row td.mono {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.col-num {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  width: 28px;
+}
+.col-time {
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.col-provider { min-width: 80px; }
+.col-type {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.03em;
+}
+.col-category {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  max-width: 160px;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.col-cache { min-width: 70px; }
+.col-latency {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-align: right;
+}
+.col-latency.slow { color: var(--accent-amber); }
+.col-tokens {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+.col-cost {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-align: right;
+  font-weight: 500;
+}
+.col-cost.has-cost { color: var(--text-secondary); }
+.col-cost.free { color: var(--text-muted); }
+.col-expand {
+  width: 20px;
+  color: var(--text-muted);
+  transition: transform 0.2s, color 0.15s;
+}
+.call-log-row:hover .col-expand { color: var(--text-tertiary); }
+.call-log-row.expanded .col-expand { transform: rotate(90deg); color: var(--accent-blue); }
+
+/* Cache status pill */
+.cache-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono);
+  font-size: 10px; font-weight: 500;
+}
+.cache-pill.hit { background: var(--cache-hit-bg); color: var(--cache-hit); }
+.cache-pill.miss { background: var(--cache-miss-bg); color: var(--cache-miss); }
+.cache-pill.bypass { background: var(--cache-bypass-bg); color: var(--cache-bypass); }
+.cache-pill.stale { background: var(--cache-stale-bg); color: var(--cache-stale); }
+
+/* Row detail expansion */
+.row-detail-wrap {
+  display: none;
+  background: rgba(47,129,247,0.025);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.row-detail-wrap.visible { display: table-row; }
+.row-detail-cell {
+  padding: 12px 14px 14px 42px;
+}
+.row-detail-grid {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 6px 20px;
+  align-items: start;
+}
+.detail-label {
+  font-size: 10px; font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.05em;
+  white-space: nowrap;
+  padding-top: 1px;
+}
+.detail-value {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  word-break: break-all;
+}
+.detail-snippet {
+  grid-column: 1 / -1;
+  margin-top: 6px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-tertiary);
+  line-height: 1.6;
+  overflow-x: auto;
+  white-space: pre;
+}
+.detail-snippet .key { color: #6badf7; }
+.detail-snippet .string { color: #34d399; }
+.detail-snippet .number { color: #fbbf24; }
+
+/* ─── DEBUG TOGGLE PILL ─────────────────────────────────────── */
+.debug-pill {
+  position: fixed;
+  bottom: 20px; right: 20px;
+  z-index: 500;
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 11px; font-weight: 500;
+  color: var(--text-secondary);
+  transition: all 0.15s;
+  user-select: none;
+}
+.debug-pill:hover {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+.debug-pill.on {
+  border-color: rgba(16,185,129,0.4);
+  background: rgba(16,185,129,0.08);
+  color: var(--accent-green);
+}
+.debug-indicator {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.debug-pill.on .debug-indicator {
+  background: var(--accent-green);
+  box-shadow: 0 0 6px rgba(16,185,129,0.5);
+}
+
+/* ─── FEATURE HIDDEN STATE ──────────────────────────────────── */
+.debug-gated {
+  transition: opacity 0.3s ease;
+}
+.debug-gated.hidden {
+  opacity: 0.3;
+  pointer-events: none;
+  filter: blur(1px);
+}
+
+/* ─── NOTE BANNER ───────────────────────────────────────────── */
+.note-banner {
+  position: fixed;
+  top: calc(var(--header-h) + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(47,129,247,0.12);
+  border: 1px solid rgba(47,129,247,0.25);
+  border-radius: var(--radius-pill);
+  padding: 6px 14px;
+  font-size: 11px; color: #6badf7;
+  z-index: 100;
+  white-space: nowrap;
+}
+
+/* ─── RESPONSIVE TWEAKS ─────────────────────────────────────── */
+@media (max-width: 900px) {
+  :root { --drawer-w: 90vw; --popover-w: 360px; }
+}
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- ─── HEADER ──────────────────────────────────────── -->
+  <header class="app-header">
+    <div class="logo">
+      <div class="logo-mark">W</div>
+      WhatIf<span>Investments</span>.ai
+    </div>
+
+    <div class="header-address">
+      <svg class="header-address-icon" width="13" height="13" viewBox="0 0 16 16" fill="none">
+        <path d="M8 1.5C5.51 1.5 3.5 3.51 3.5 6c0 3.5 4.5 9 4.5 9s4.5-5.5 4.5-9c0-2.49-2.01-4.5-4.5-4.5zM8 8a2 2 0 110-4 2 2 0 010 4z" fill="currentColor"/>
+      </svg>
+      <span class="header-address-text">1847 Coral Gate Dr, Kissimmee, FL 34746</span>
+    </div>
+
+    <div class="header-right debug-gated">
+      <!-- Usage Badge — clicks open/close popover -->
+      <div class="usage-badge" id="usageBadge" onclick="toggleUsagePopover()">
+        <div class="badge-dot"></div>
+        <span class="badge-stat"><strong>14</strong> calls</span>
+        <div class="badge-divider"></div>
+        <span class="badge-stat"><strong>36%</strong> cached</span>
+        <div class="badge-divider"></div>
+        <span class="badge-stat"><strong>24.8k</strong> tok</span>
+        <div class="badge-divider"></div>
+        <span class="badge-cost">$0.184</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ─── CONTENT (mock chat) ─────────────────────────── -->
+  <div class="content-area">
+    <div class="mock-chat">
+      <div class="chat-msg">
+        <div class="chat-avatar agent">AI</div>
+        <div class="chat-bubble agent-bubble">
+          Analysis complete for <strong>1847 Coral Gate Dr, Kissimmee, FL 34746</strong>.<br>
+          Estimated gross revenue: <strong>$42,800/yr</strong> · Cap rate: <strong>8.4%</strong> · Cash-on-cash: <strong>11.2%</strong>.<br>
+          This property has strong STR potential in Osceola County. Want me to run a stress test?
+        </div>
+      </div>
+      <div class="chat-msg user">
+        <div class="chat-avatar user-av">R</div>
+        <div class="chat-bubble user-bubble">
+          Yes, run a stress test at -20% occupancy and show me the breakeven.
+        </div>
+      </div>
+      <div class="chat-msg">
+        <div class="chat-avatar agent">AI</div>
+        <div class="chat-bubble agent-bubble">
+          At -20% occupancy the property still cash-flows positively at $+380/mo.<br>
+          Breakeven occupancy: <strong>58%</strong> · Break-even nightly rate: <strong>$112</strong>.<br>
+          The downside scenario is well within historic Kissimmee STR occupancy floors (67–74%).
+        </div>
+      </div>
+      <div class="chat-msg user">
+        <div class="chat-avatar user-av">R</div>
+        <div class="chat-bubble user-bubble">
+          What does the competitive landscape look like within 3 miles?
+        </div>
+      </div>
+      <div class="chat-msg">
+        <div class="chat-avatar agent">AI</div>
+        <div class="chat-bubble agent-bubble">
+          Found <strong>47 active STR comps</strong> within 3 mi. Median nightly rate: $138.<br>
+          Your property is 4BR/2BA — comp cohort average: $142/night, 71% occupancy.<br>
+          Neighborhood saturation index: <strong>0.62</strong> (moderate competition).
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── NOTE BANNER ──────────────────────────────────── -->
+<div class="note-banner">
+  Mock: click the usage badge (top-right) to open the inspector. Debug toggle is bottom-right.
+</div>
+
+<!-- ─── LEVEL 1: POPOVER ─────────────────────────────── -->
+<div class="popover-overlay" id="popoverOverlay" onclick="handleOverlayClick(event)">
+  <div class="popover" id="popover">
+
+    <!-- Header -->
+    <div class="popover-header">
+      <span class="popover-title">API Usage &amp; Cost</span>
+      <span class="popover-session-id">session · s_k8mq2x9p</span>
+    </div>
+
+    <!-- Summary row -->
+    <div class="summary-row">
+      <div class="summary-stat">
+        <span class="summary-stat-label">Total Calls</span>
+        <span class="summary-stat-value">14</span>
+      </div>
+      <div class="summary-stat">
+        <span class="summary-stat-label">Cache Rate</span>
+        <span class="summary-stat-value amber">36%</span>
+      </div>
+      <div class="summary-stat">
+        <span class="summary-stat-label">Tokens</span>
+        <span class="summary-stat-value">24.8k</span>
+      </div>
+      <div class="summary-stat">
+        <span class="summary-stat-label">Est. Cost</span>
+        <span class="summary-stat-value green">$0.184</span>
+      </div>
+    </div>
+
+    <!-- Cache hit bar -->
+    <div class="cache-bar-wrap">
+      <div class="cache-bar-label">
+        <span class="cache-bar-title">Cache breakdown</span>
+        <div class="cache-legend">
+          <span class="cache-legend-item">
+            <span class="cache-legend-dot" style="background:var(--cache-hit)"></span>hit 5
+          </span>
+          <span class="cache-legend-item">
+            <span class="cache-legend-dot" style="background:var(--cache-miss)"></span>miss 8
+          </span>
+          <span class="cache-legend-item">
+            <span class="cache-legend-dot" style="background:var(--cache-bypass)"></span>bypass 1
+          </span>
+        </div>
+      </div>
+      <div class="cache-bar">
+        <div class="cache-bar-segment hit"   style="width:35.7%"></div>
+        <div class="cache-bar-segment miss"  style="width:57.1%"></div>
+        <div class="cache-bar-segment bypass" style="width:7.2%"></div>
+      </div>
+    </div>
+
+    <!-- By Provider accordion -->
+    <div class="accordion-section">
+      <button class="accordion-toggle open" onclick="toggleAccordion(this)">
+        By Provider
+        <svg class="accordion-chevron" width="12" height="12" viewBox="0 0 16 16" fill="none">
+          <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <div class="accordion-body open">
+        <table class="popover-table">
+          <thead>
+            <tr>
+              <th>Provider</th>
+              <th>Type</th>
+              <th>Calls</th>
+              <th>Hits</th>
+              <th>Tokens</th>
+              <th>Cost</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="provider-badge openai">openai</span></td>
+              <td class="col-type">llm</td>
+              <td class="mono">8</td>
+              <td class="mono">3</td>
+              <td class="mono">22.4k</td>
+              <td class="mono primary">$0.178</td>
+            </tr>
+            <tr>
+              <td><span class="provider-badge rentcast">rentcast</span></td>
+              <td class="col-type">api</td>
+              <td class="mono">4</td>
+              <td class="mono">2</td>
+              <td class="mono">—</td>
+              <td class="mono primary">$0.006</td>
+            </tr>
+            <tr>
+              <td><span class="provider-badge zillow">zillow</span></td>
+              <td class="col-type">scrape</td>
+              <td class="mono">2</td>
+              <td class="mono">0</td>
+              <td class="mono">—</td>
+              <td class="mono primary">$0.000</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- By Prompt Category accordion -->
+    <div class="accordion-section">
+      <button class="accordion-toggle open" onclick="toggleAccordion(this)">
+        By Prompt Category
+        <svg class="accordion-chevron" width="12" height="12" viewBox="0 0 16 16" fill="none">
+          <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <div class="accordion-body open">
+        <table class="popover-table">
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>Calls</th>
+              <th>Tok In</th>
+              <th>Tok Out</th>
+              <th>Cost</th>
+              <th>Avg ms</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="primary">str_estimate</td>
+              <td class="mono">2</td>
+              <td class="mono">2.4k</td>
+              <td class="mono">680</td>
+              <td class="mono primary">$0.036</td>
+              <td class="mono">1,240</td>
+            </tr>
+            <tr>
+              <td class="primary">stress_test</td>
+              <td class="mono">1</td>
+              <td class="mono">2.8k</td>
+              <td class="mono">1.2k</td>
+              <td class="mono primary">$0.052</td>
+              <td class="mono">2,400</td>
+            </tr>
+            <tr>
+              <td class="primary">financial_summary</td>
+              <td class="mono">1</td>
+              <td class="mono">2.4k</td>
+              <td class="mono">890</td>
+              <td class="mono primary">$0.041</td>
+              <td class="mono">2,100</td>
+            </tr>
+            <tr>
+              <td class="primary">competition_analysis</td>
+              <td class="mono">1</td>
+              <td class="mono">1.9k</td>
+              <td class="mono">720</td>
+              <td class="mono primary">$0.032</td>
+              <td class="mono">1,680</td>
+            </tr>
+            <tr>
+              <td class="primary">breakeven_analysis</td>
+              <td class="mono">1</td>
+              <td class="mono">1.1k</td>
+              <td class="mono">420</td>
+              <td class="mono primary">$0.019</td>
+              <td class="mono">1,800</td>
+            </tr>
+            <tr>
+              <td class="primary">investment_verdict</td>
+              <td class="mono">1</td>
+              <td class="mono">—</td>
+              <td class="mono">—</td>
+              <td class="mono" style="color:var(--text-muted)">$0.000</td>
+              <td class="mono">8</td>
+            </tr>
+            <tr>
+              <td class="primary">neighborhood_analysis</td>
+              <td class="mono">1</td>
+              <td class="mono">1.4k</td>
+              <td class="mono">510</td>
+              <td class="mono primary">$0.024</td>
+              <td class="mono">1,520</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="popover-footer">
+      <button class="show-calllog-btn" onclick="openDrawer()">
+        Show call log
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+          <path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── LEVEL 2: DRAWER ──────────────────────────────── -->
+<div class="drawer-backdrop" id="drawerBackdrop" onclick="closeDrawer()"></div>
+
+<div class="drawer" id="drawer">
+
+  <!-- Drawer header -->
+  <div class="drawer-header">
+    <div class="drawer-header-info">
+      <div class="drawer-header-title">API Call Inspector</div>
+      <div class="drawer-header-meta">
+        <span class="drawer-meta-item">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M5 8h6M5 11h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          <span class="drawer-meta-value">s_k8mq2x9p</span>
+        </span>
+        <span class="drawer-meta-item">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M8 1.5C5.51 1.5 3.5 3.51 3.5 6c0 3.5 4.5 9 4.5 9s4.5-5.5 4.5-9c0-2.49-2.01-4.5-4.5-4.5z" fill="currentColor"/></svg>
+          <span class="drawer-meta-value">1847 Coral Gate Dr, Kissimmee FL</span>
+        </span>
+        <span class="drawer-meta-item">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.4"/><path d="M8 5v3.5l2.5 2.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          <span class="drawer-meta-value">8.3s total</span>
+        </span>
+        <span class="drawer-meta-item">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M3 8l3 3 7-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="drawer-meta-value cost">$0.184 est.</span>
+        </span>
+      </div>
+    </div>
+    <button class="drawer-close" onclick="closeDrawer()" title="Close inspector">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+        <path d="M12 4L4 12M4 4l8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Waterfall timeline -->
+  <div class="waterfall-wrap">
+    <div class="waterfall-label">
+      <span>Timeline</span>
+      <span style="color:var(--text-muted);font-family:var(--font-mono);font-size:10px;">14 calls over 8.3s</span>
+    </div>
+    <div class="waterfall-timeline" id="waterfall">
+      <!-- Blocks rendered by JS -->
+    </div>
+    <div class="waterfall-ticks">
+      <span class="waterfall-tick">0s</span>
+      <span class="waterfall-tick">1s</span>
+      <span class="waterfall-tick">2s</span>
+      <span class="waterfall-tick">3s</span>
+      <span class="waterfall-tick">4s</span>
+      <span class="waterfall-tick">5s</span>
+      <span class="waterfall-tick">6s</span>
+      <span class="waterfall-tick">7s</span>
+      <span class="waterfall-tick">8.3s</span>
+    </div>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="filter-bar">
+    <span class="filter-label">Filter</span>
+    <button class="filter-chip active" data-filter="all" onclick="setFilter('all', this)">All</button>
+    <div class="filter-separator"></div>
+    <button class="filter-chip openai-chip" data-filter="openai" onclick="setFilter('openai', this)">openai</button>
+    <button class="filter-chip rentcast-chip" data-filter="rentcast" onclick="setFilter('rentcast', this)">rentcast</button>
+    <button class="filter-chip zillow-chip" data-filter="zillow" onclick="setFilter('zillow', this)">zillow</button>
+    <div class="filter-separator"></div>
+    <button class="filter-chip" data-filter="llm" onclick="setFilter('llm', this)">llm</button>
+    <button class="filter-chip" data-filter="api" onclick="setFilter('api', this)">api</button>
+    <button class="filter-chip" data-filter="scrape" onclick="setFilter('scrape', this)">scrape</button>
+    <div class="filter-separator"></div>
+    <button class="filter-chip" data-filter="hit" onclick="setFilter('hit', this)">hit</button>
+    <button class="filter-chip" data-filter="miss" onclick="setFilter('miss', this)">miss</button>
+  </div>
+
+  <!-- Call log table -->
+  <div class="call-log-wrap">
+    <table class="call-log-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Time</th>
+          <th>Provider</th>
+          <th>Type</th>
+          <th>Prompt Category</th>
+          <th>Cache</th>
+          <th style="text-align:right">Latency</th>
+          <th>Tokens (in→out)</th>
+          <th style="text-align:right">Cost</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="callLogBody">
+        <!-- Rows rendered by JS -->
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ─── DEBUG TOGGLE ─────────────────────────────────── -->
+<div class="debug-pill on" id="debugPill" onclick="toggleDebug()">
+  <div class="debug-indicator"></div>
+  debug
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   MOCK DATA
+   ═══════════════════════════════════════════════════════ */
+const CALLS = [
+  {
+    id: 1,
+    time: 0.0,
+    provider: 'rentcast',
+    type: 'api',
+    category: 'listing_data',
+    cache: 'miss',
+    latencyMs: 480,
+    tokensIn: null, tokensOut: null,
+    cost: 0.0005,
+    endpoint: 'GET /v1/properties/lookup',
+    model: null,
+    statusCode: 200,
+    error: null,
+    requestSnippet: `{
+  "address": "1847 Coral Gate Dr",
+  "city": "Kissimmee",
+  "state": "FL",
+  "zip": "34746"
+}`,
+  },
+  {
+    id: 2,
+    time: 0.5,
+    provider: 'zillow',
+    type: 'scrape',
+    category: 'listing_data',
+    cache: 'miss',
+    latencyMs: 650,
+    tokensIn: null, tokensOut: null,
+    cost: 0.0,
+    endpoint: 'GET zillow.com/homes/{zpid}',
+    model: null,
+    statusCode: 200,
+    error: null,
+    requestSnippet: `User-Agent: Mozilla/5.0 (compatible)
+Target: https://www.zillow.com/homes/1847-Coral-Gate-Dr_rb/
+Selectors: [price, beds, baths, sqft, year_built, lot_size]`,
+  },
+  {
+    id: 3,
+    time: 1.2,
+    provider: 'openai',
+    type: 'llm',
+    category: 'str_estimate',
+    cache: 'miss',
+    latencyMs: 1240,
+    tokensIn: 1200, tokensOut: 340,
+    cost: 0.0180,
+    endpoint: 'POST chat/completions',
+    model: 'gpt-4o-mini',
+    statusCode: 200,
+    error: null,
+    requestSnippet: `{
+  "model": "gpt-4o-mini",
+  "messages": [
+    { "role": "system", "content": "You are an STR revenue analyst..." },
+    { "role": "user",   "content": "Estimate STR revenue for 4BR property..." }
+  ],
+  "temperature": 0.2,
+  "max_tokens": 512
+}`,
+  },
+  {
+    id: 4,
+    time: 2.5,
+    provider: 'rentcast',
+    type: 'api',
+    category: 'comp_data',
+    cache: 'miss',
+    latencyMs: 380,
+    tokensIn: null, tokensOut: null,
+    cost: 0.0005,
+    endpoint: 'GET /v1/markets/rental-comps',
+    model: null,
+    statusCode: 200,
+    error: null,
+    requestSnippet: `{
+  "address": "1847 Coral Gate Dr, Kissimmee, FL",
+  "propertyType": "Single Family",
+  "bedrooms": 4,
+  "radius": 3
+}`,
+  },
+  {
+    id: 5,
+    time: 2.9,
+    provider: 'openai',
+    type: 'llm',
+    category: 'financial_summary',
+    cache: 'miss',
+    latencyMs: 2100,
+    tokensIn: 2400, tokensOut: 890,
+    cost: 0.0413,
+    endpoint: 'POST chat/completions',
+    model: 'gpt-4o',
+    statusCode: 200,
+    error: null,
+    requestSnippet: `{
+  "model": "gpt-4o",
+  "messages": [
+    { "role": "system", "content": "You are a real estate financial analyst..." },
+    { "role": "user",   "content": "Compute cap rate, CoC, and NOI for: {...}" }
+  ],
+  "temperature": 0.1
+}`,
+  },
+  {
+    id: 6,
+    time: 3.4,
+    provider: 'openai',
+    type: 'llm',
+    category: 'investment_verdict',
+    cache: 'hit',
+    latencyMs: 8,
+    tokensIn: null, tokensOut: null,
+    cost: 0.0,
+    endpoint: 'POST chat/completions (cached)',
+    model: 'gpt-4o-mini',
+    statusCode: 200,
+    error: null,
+    requestSnippet: `// Served from LLM response cache (TTL 3600s)
+// Cache key: sha256(model + sorted_messages)
+// Saved: 1,100 input tokens + 420 output tokens
+// Cache age: 1h 24m`,
+  },
+  {
+    id: 7,
+    time: 3.5,
+    provider: 'openai',
+    type: 'llm',
+    category: 'breakeven_analysis',
+    cache: 'miss',
+    latencyMs: 1800,
+    tokensIn: 1100, tokensOut: 420,
+    cost: 0.0186,
+    endpoint: 'POST chat/completions',
+    model: 'gpt-4o-mini',
+    statusCode: 200,
+    error: null,
+    requestSnippet: `{
+  "model": "gpt-4o-mini",
+  "messages": [
+    { "role": "user", "content": "At -20% occupancy, compute breakeven..." }
+  ],
+  "temperature": 0.15,
+  "max_tokens": 600
+}`,
+  },
+  {
+    id: 8,
+    time: 4.1,
+    provider: 'rentcast',
+    type: 'api',
+    category: 'market_trends',
+    cache: 'hit',
+    latencyMs: 12,
+    tokensIn: null, tokensOut: null,
+    cost: 0.0,
+    endpoint: 'GET /v1/markets/stats',
+    model: null,
+    statusCode: 200,
+    error: null,
+    requestSnippet: `// Cache hit — no network call made
+// Provider: rentcast · Key: mkt_stats_kissimmee_4br_2026q2
+// Cache age: 18m · TTL: 6h`,
+  },
+  {
+    id: 9,
+    time: 4.2,
+    provider: 'openai',
+    type: 'llm',
+    category: 'stress_test',
+    cache: 'miss',
+    latencyMs: 2400,
+    tokensIn: 2800, tokensOut: 1200,
+    cost: 0.0522,
+    endpoint: 'POST chat/completions',
+    model: 'gpt-4o',
+    statusCode: 200,
+    error: null,
+    requestSnippet: `{
+  "model": "gpt-4o",
+  "messages": [
+    { "role": "system", "content": "Run multi-scenario STR stress test..." },
+    { "role": "user",   "content": "Scenarios: -20% occ, +15% rate, rising rates..." }
+  ],
+  "temperature": 0.1,
+  "max_tokens": 1800
+}`,
+  },
+  {
+    id: 10,
+    time: 5.3,
+    provider: 'zillow',
+    type: 'scrape',
+    category: 'listing_data',
+    cache: 'miss',
+    latencyMs: 650,
+    tokensIn: null, tokensOut: null,
+    cost: 0.0,
+    endpoint: 'GET zillow.com/rental-manager/comps',
+    model: null,
+    statusCode: 200,
+    error: null,
+    requestSnippet: `User-Agent: Mozilla/5.0 (compatible)
+Target: https://www.zillow.com/rental-manager/comps?address=...
+Selectors: [rental_estimate, rental_range_low, rental_range_high]`,
+  },
+  {
+    id: 11,
+    time: 6.0,
+    provider: 'rentcast',
+    type: 'api',
+    category: 'comp_data',
+    cache: 'hit',
+    latencyMs: 9,
+    tokensIn: null, tokensOut: null,
+    cost: 0.0,
+    endpoint: 'GET /v1/properties/rental-comps',
+    model: null,
+    statusCode: 200,
+    error: null,
+    requestSnippet: `// Cache hit
+// Key: str_comps_kissimmee_4br_3mi_2026q2
+// Cache age: 42m · TTL: 12h`,
+  },
+  {
+    id: 12,
+    time: 6.1,
+    provider: 'openai',
+    type: 'llm',
+    category: 'competition_analysis',
+    cache: 'miss',
+    latencyMs: 1680,
+    tokensIn: 1900, tokensOut: 720,
+    cost: 0.0316,
+    endpoint: 'POST chat/completions',
+    model: 'gpt-4o',
+    statusCode: 200,
+    error: null,
+    requestSnippet: `{
+  "model": "gpt-4o",
+  "messages": [
+    { "role": "user", "content": "Analyze 47 STR comps within 3mi of subject..." }
+  ],
+  "temperature": 0.1
+}`,
+  },
+  {
+    id: 13,
+    time: 7.8,
+    provider: 'openai',
+    type: 'llm',
+    category: 'neighborhood_analysis',
+    cache: 'hit',
+    latencyMs: 11,
+    tokensIn: null, tokensOut: null,
+    cost: 0.0,
+    endpoint: 'POST chat/completions (cached)',
+    model: 'gpt-4o-mini',
+    statusCode: 200,
+    error: null,
+    requestSnippet: `// Cache hit — neighborhood data cached from prior session
+// Cache key: sha256(model + prompt_hash_neighborhood_kissimmee)
+// Cache age: 3h 12m`,
+  },
+  {
+    id: 14,
+    time: 7.9,
+    provider: 'openai',
+    type: 'llm',
+    category: 'str_estimate',
+    cache: 'miss',
+    latencyMs: 1180,
+    tokensIn: 1100, tokensOut: 340,
+    cost: 0.0173,
+    endpoint: 'POST chat/completions',
+    model: 'gpt-4o-mini',
+    statusCode: 200,
+    error: null,
+    requestSnippet: `{
+  "model": "gpt-4o-mini",
+  "messages": [
+    { "role": "user", "content": "Refine STR revenue estimate with comp data..." }
+  ],
+  "temperature": 0.2,
+  "max_tokens": 512
+}`,
+  },
+];
+
+const TOTAL_DURATION = 9.1; // seconds (slightly past last call end for padding)
+
+/* ═══════════════════════════════════════════════════════
+   STATE
+   ═══════════════════════════════════════════════════════ */
+let popoverOpen = false;
+let drawerOpen = false;
+let debugOn = true;
+let activeFilter = 'all';
+const expandedRows = new Set();
+
+/* ═══════════════════════════════════════════════════════
+   DEBUG TOGGLE
+   ═══════════════════════════════════════════════════════ */
+function toggleDebug() {
+  debugOn = !debugOn;
+  const pill = document.getElementById('debugPill');
+  const gated = document.querySelectorAll('.debug-gated');
+  pill.classList.toggle('on', debugOn);
+  gated.forEach(el => el.classList.toggle('hidden', !debugOn));
+  if (!debugOn) {
+    closePopover();
+    closeDrawer();
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   POPOVER
+   ═══════════════════════════════════════════════════════ */
+function toggleUsagePopover() {
+  if (!debugOn) return;
+  popoverOpen ? closePopover() : openPopover();
+}
+
+function openPopover() {
+  popoverOpen = true;
+  document.getElementById('popover').classList.add('visible');
+  document.getElementById('popoverOverlay').classList.add('visible');
+  document.getElementById('usageBadge').classList.add('active');
+}
+
+function closePopover() {
+  popoverOpen = false;
+  document.getElementById('popover').classList.remove('visible');
+  document.getElementById('popoverOverlay').classList.remove('visible');
+  document.getElementById('usageBadge').classList.remove('active');
+}
+
+function handleOverlayClick(e) {
+  // Only close if clicking the overlay itself, not a child
+  if (e.target === document.getElementById('popoverOverlay')) {
+    closePopover();
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   ACCORDION
+   ═══════════════════════════════════════════════════════ */
+function toggleAccordion(btn) {
+  const body = btn.nextElementSibling;
+  const isOpen = body.classList.contains('open');
+  btn.classList.toggle('open', !isOpen);
+  body.classList.toggle('open', !isOpen);
+}
+
+/* ═══════════════════════════════════════════════════════
+   DRAWER
+   ═══════════════════════════════════════════════════════ */
+function openDrawer() {
+  drawerOpen = true;
+  document.getElementById('drawer').classList.add('visible');
+  document.getElementById('drawerBackdrop').classList.add('visible');
+  closePopover();
+  renderWaterfall();
+}
+
+function closeDrawer() {
+  drawerOpen = false;
+  document.getElementById('drawer').classList.remove('visible');
+  document.getElementById('drawerBackdrop').classList.remove('visible');
+}
+
+/* ═══════════════════════════════════════════════════════
+   WATERFALL TIMELINE
+   ═══════════════════════════════════════════════════════ */
+function renderWaterfall() {
+  const container = document.getElementById('waterfall');
+  container.innerHTML = '';
+
+  CALLS.forEach(call => {
+    const startPct = (call.time / TOTAL_DURATION) * 100;
+    const durationSec = call.latencyMs / 1000;
+    let widthPct = (durationSec / TOTAL_DURATION) * 100;
+    // minimum visible width
+    widthPct = Math.max(widthPct, 0.4);
+
+    const block = document.createElement('div');
+    block.className = `waterfall-block ${call.provider}${call.cache === 'hit' ? ' hit' : ''}`;
+    block.style.left = startPct + '%';
+    block.style.width = widthPct + '%';
+
+    // Tooltip
+    block.title = `#${call.id} ${call.provider} · ${call.category || call.type} · ${call.latencyMs}ms · ${call.cache}`;
+
+    block.onclick = () => {
+      // Scroll to row
+      const row = document.querySelector(`tr[data-id="${call.id}"]`);
+      if (row) {
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        row.style.transition = 'background 0.3s';
+        row.style.background = 'rgba(47,129,247,0.12)';
+        setTimeout(() => { row.style.background = ''; }, 1200);
+      }
+    };
+
+    container.appendChild(block);
+  });
+}
+
+/* ═══════════════════════════════════════════════════════
+   FILTER
+   ═══════════════════════════════════════════════════════ */
+function setFilter(filter, btn) {
+  activeFilter = filter;
+
+  // Update chip states
+  document.querySelectorAll('.filter-chip').forEach(c => {
+    c.classList.remove('active');
+  });
+  btn.classList.add('active');
+
+  // Filter rows
+  renderCallLog();
+}
+
+function matchesFilter(call) {
+  if (activeFilter === 'all') return true;
+  if (['openai','rentcast','zillow'].includes(activeFilter)) return call.provider === activeFilter;
+  if (['llm','api','scrape'].includes(activeFilter)) return call.type === activeFilter;
+  if (activeFilter === 'hit') return call.cache === 'hit';
+  if (activeFilter === 'miss') return call.cache === 'miss';
+  return true;
+}
+
+/* ═══════════════════════════════════════════════════════
+   CALL LOG TABLE
+   ═══════════════════════════════════════════════════════ */
+function formatCost(cost) {
+  if (!cost || cost === 0) return '$0.000';
+  return '$' + cost.toFixed(4).replace(/0+$/, '').replace(/\.$/, '0');
+}
+
+function formatTokens(call) {
+  if (!call.tokensIn && !call.tokensOut) return '—';
+  const kin = call.tokensIn >= 1000 ? (call.tokensIn/1000).toFixed(1)+'k' : call.tokensIn;
+  const kout = call.tokensOut >= 1000 ? (call.tokensOut/1000).toFixed(1)+'k' : call.tokensOut;
+  return `${kin}→${kout}`;
+}
+
+function renderCallLog() {
+  const tbody = document.getElementById('callLogBody');
+  tbody.innerHTML = '';
+
+  const filtered = CALLS.filter(matchesFilter);
+
+  filtered.forEach((call, idx) => {
+    // Main row
+    const tr = document.createElement('tr');
+    tr.className = 'call-log-row' + (expandedRows.has(call.id) ? ' expanded' : '');
+    tr.setAttribute('data-id', call.id);
+    tr.setAttribute('data-provider', call.provider);
+    tr.setAttribute('data-type', call.type);
+    tr.setAttribute('data-cache', call.cache);
+
+    const latencyClass = call.latencyMs > 1500 ? 'slow' : '';
+    const costClass = call.cost > 0 ? 'has-cost' : 'free';
+    const latencyDisplay = call.latencyMs >= 1000
+      ? (call.latencyMs/1000).toFixed(2)+'s'
+      : call.latencyMs+'ms';
+
+    tr.innerHTML = `
+      <td class="col-num">${call.id}</td>
+      <td class="col-time mono">+${call.time.toFixed(1)}s</td>
+      <td class="col-provider">
+        <span class="provider-badge ${call.provider}">${call.provider}</span>
+      </td>
+      <td class="col-type">${call.type}</td>
+      <td class="col-category">${call.category || '—'}</td>
+      <td class="col-cache">
+        <span class="cache-pill ${call.cache}">${call.cache}</span>
+      </td>
+      <td class="col-latency ${latencyClass}">${latencyDisplay}</td>
+      <td class="col-tokens mono">${formatTokens(call)}</td>
+      <td class="col-cost ${costClass}">${formatCost(call.cost)}</td>
+      <td class="col-expand">
+        <svg width="10" height="10" viewBox="0 0 16 16" fill="none">
+          <path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </td>
+    `;
+
+    tr.onclick = () => toggleRowDetail(call.id);
+    tbody.appendChild(tr);
+
+    // Detail row
+    const detailTr = document.createElement('tr');
+    detailTr.className = 'row-detail-wrap' + (expandedRows.has(call.id) ? ' visible' : '');
+    detailTr.setAttribute('data-detail-id', call.id);
+
+    const modelLine = call.model
+      ? `<span class="detail-label">Model</span><span class="detail-value">${call.model}</span>`
+      : '';
+    const errorLine = call.error
+      ? `<span class="detail-label">Error</span><span class="detail-value" style="color:var(--accent-red)">${call.error}</span>`
+      : '';
+
+    // Colorize snippet
+    const snippet = call.requestSnippet
+      .replace(/"([^"]+)":/g, '<span class="key">"$1"</span>:')
+      .replace(/: "([^"]+)"/g, ': <span class="string">"$1"</span>')
+      .replace(/: (\d+(?:\.\d+)?)/g, ': <span class="number">$1</span>');
+
+    detailTr.innerHTML = `
+      <td class="row-detail-cell" colspan="10">
+        <div class="row-detail-grid">
+          <span class="detail-label">Endpoint</span>
+          <span class="detail-value">${call.endpoint}</span>
+          <span></span>
+          ${modelLine}
+          <span class="detail-label">Status</span>
+          <span class="detail-value" style="color:${call.statusCode===200?'var(--accent-green)':'var(--accent-red)'}">${call.statusCode} ${call.statusCode===200?'OK':'Error'}</span>
+          <span></span>
+          ${errorLine}
+          <div class="detail-snippet">${snippet}</div>
+        </div>
+      </td>
+    `;
+
+    tbody.appendChild(detailTr);
+  });
+}
+
+function toggleRowDetail(id) {
+  if (expandedRows.has(id)) {
+    expandedRows.delete(id);
+  } else {
+    expandedRows.add(id);
+  }
+  // Update expanded rows without full re-render
+  const mainRow = document.querySelector(`tr[data-id="${id}"]`);
+  const detailRow = document.querySelector(`tr[data-detail-id="${id}"]`);
+  if (mainRow) mainRow.classList.toggle('expanded', expandedRows.has(id));
+  if (detailRow) detailRow.classList.toggle('visible', expandedRows.has(id));
+}
+
+/* ═══════════════════════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════════════════════ */
+renderCallLog();
+
+// Keyboard escape to close
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if (drawerOpen) closeDrawer();
+    else if (popoverOpen) closePopover();
+  }
+});
+
+// Simulate debug param: auto-open popover if ?debug=true in URL
+if (new URLSearchParams(window.location.search).get('debug') === 'true') {
+  // Already on — the feature is visible
+}
+</script>
+</body>
+</html>

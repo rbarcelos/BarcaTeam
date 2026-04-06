@@ -28,6 +28,11 @@ tools:
   - Agent(investor)
   - Agent(marketing-brand-strategist)
   - Agent(ux-critic)
+  - Agent(competitor-analyst)
+  - Agent(data-quality-auditor)
+  - Agent(accessibility-reviewer)
+  - Agent(copy-editor)
+  - Agent(security-reviewer)
   - AskUserQuestion
 memory: user
 skills:
@@ -299,10 +304,19 @@ After PRs are merged:
 **Strategic advisors:**
 - `ceo` — product vision, scope challenges, premise testing, strategic alignment
 - `investor` — business viability, product-market fit, monetization, competitive positioning
+- `marketing-brand-strategist` — brand, positioning, go-to-market, copy voice
 
 **Domain agents:**
 - `str-revenue-strategist` — STR revenue modeling and underwriting
 - Persona agents — stakeholder evaluators (power-user, international-investor, mortgage-manager, buyer-agent, regulatory-compliance, str-operator)
+
+**Quality & Audit agents:**
+- `ux-critic` — UX evaluation, information architecture, trust, friction
+- `competitor-analyst` — competitive benchmarking, feature gap analysis, market positioning
+- `data-quality-auditor` — data accuracy, pipeline integrity, cross-surface consistency
+- `accessibility-reviewer` — WCAG 2.1 AA compliance, keyboard navigation, screen readers
+- `copy-editor` — user-facing text clarity, terminology consistency, tone
+- `security-reviewer` — OWASP, secrets, auth, LLM security, privacy
 
 ## Capability Artifacts
 For new capabilities, produce these in the primary repo's `docs/capabilities/<cap_slug>/`:
