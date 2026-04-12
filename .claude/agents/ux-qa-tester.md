@@ -253,6 +253,14 @@ test.describe("UX QA — <Surface/Flow Name>", () => {
 - **Medium** — Data formatting issue, missing state handling, inconsistent display
 - **Low** — Cosmetic issue, minor timing, non-blocking polish
 
+## Visual Pattern Rules (learned from missed issues)
+
+Verify these patterns explicitly during every audit:
+
+1. **Layout density** — When a rendered list has 4+ short items, verify it uses a multi-column grid. Single-column stacking of short items wastes vertical space. Check expense lists, feature grids.
+2. **Redundant visual encoding** — When color conveys meaning (red = negative), verify there is NO redundant symbol (−, +). Flag double-encoding.
+3. **Breakdown completeness** — When one metric section has a heading + breakdown table, verify related metrics at the same level have equivalent breakdowns. Flag orphaned totals.
+
 ## Must Do
 - **Always run existing tests first** — `npx playwright test` — to establish baseline
 - **Always mock with realistic, distinctive values** — never use round numbers that could be defaults

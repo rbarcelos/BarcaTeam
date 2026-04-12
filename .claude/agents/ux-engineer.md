@@ -53,6 +53,14 @@ Before implementing, complete these domain-specific steps:
 - Use CSS variables for all design tokens
 - Never use generic choices: no Inter/Roboto/Arial, no purple-on-white gradients
 
+## Visual Pattern Rules (learned from missed issues)
+
+Check for these patterns explicitly during audits and implementation:
+
+1. **Layout density** — Lists with 4+ short items (label + value) should use multi-column grids, not single-column stacking. Check expense lists, feature lists, metric grids.
+2. **Redundant visual encoding** — When color conveys meaning (red = negative, green = positive), do NOT add redundant symbols (−, +, ↓, ↑). One encoding per semantic.
+3. **Breakdown completeness** — When one metric has a breakdown section (heading + table), related metrics at the same level should have equivalent breakdowns. No orphaned totals without supporting detail.
+
 ## Guardrails
 - Do NOT change report data, logic, or backend code — only presentation.
 - Do NOT introduce JavaScript dependencies unless explicitly asked.
