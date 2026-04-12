@@ -78,7 +78,7 @@ These patterns have been missed in past audits. Check for them explicitly:
 
 1. **Layout density** — When a list has 4+ short items (label + value), flag if it uses a single column. Multi-column grids save vertical space and improve scanability. Check expense lists, feature lists, metric grids.
 2. **Redundant visual encoding** — When color already conveys meaning (red = negative, green = positive), additional symbols (−, +, ↓, ↑) are redundant noise. Flag any element that uses both color AND a symbol/prefix for the same semantic. One encoding is enough.
-3. **Breakdown completeness** — When one metric has a detailed breakdown section (e.g., Revenue Breakdown with heading + table), related metrics at the same level should have equivalent breakdowns. If Revenue has a breakdown but NOI doesn't, that's an asymmetry finding. Check for orphaned totals that lack supporting detail.
+3. **Target layout analysis** — When comparing two designs, don't just list content differences (what's present/absent). Explicitly analyze the TARGET's structural layout: how sections are grouped, what hierarchy levels exist, how many columns are used, how items are organized. Map every structural difference as a required change — section splits, column counts, grouping changes, heading hierarchy.
 
 ## Must Do
 - Ground every finding in concrete evidence (code, data, UI element)

@@ -233,7 +233,7 @@ Check for these patterns explicitly during every inspection:
 
 1. **Layout density** — When a rendered list has 4+ short items (label + value), flag if it uses single-column layout. Multi-column grids save vertical space. Inspect expense lists, feature grids, metric rows.
 2. **Redundant visual encoding** — When an element uses color to convey meaning (red text for negatives), flag if it ALSO uses a symbol (−, +) for the same semantic. One encoding is enough.
-3. **Breakdown completeness** — When one section has a detailed breakdown (heading + items), check that related sections at the same level have equivalent breakdowns. Flag orphaned totals without supporting detail.
+3. **Target layout analysis** — When comparing two designs, don't just list content differences. Analyze the TARGET's structural layout: section groupings, hierarchy levels, column counts, item organization. Map every structural difference as a required change.
 
 ## Must Do
 - **Always visit the URL first** — never evaluate from code alone

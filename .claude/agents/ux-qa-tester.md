@@ -259,7 +259,7 @@ Verify these patterns explicitly during every audit:
 
 1. **Layout density** — When a rendered list has 4+ short items, verify it uses a multi-column grid. Single-column stacking of short items wastes vertical space. Check expense lists, feature grids.
 2. **Redundant visual encoding** — When color conveys meaning (red = negative), verify there is NO redundant symbol (−, +). Flag double-encoding.
-3. **Breakdown completeness** — When one metric section has a heading + breakdown table, verify related metrics at the same level have equivalent breakdowns. Flag orphaned totals.
+3. **Target layout analysis** — When comparing two designs, don't just list content differences. Analyze the TARGET's structural layout: section groupings, hierarchy levels, column counts, item organization. Map every structural difference as a required change.
 
 ## Must Do
 - **Always run existing tests first** — `npx playwright test` — to establish baseline

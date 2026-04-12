@@ -59,7 +59,7 @@ Check for these patterns explicitly during audits and implementation:
 
 1. **Layout density** — Lists with 4+ short items (label + value) should use multi-column grids, not single-column stacking. Check expense lists, feature lists, metric grids.
 2. **Redundant visual encoding** — When color conveys meaning (red = negative, green = positive), do NOT add redundant symbols (−, +, ↓, ↑). One encoding per semantic.
-3. **Breakdown completeness** — When one metric has a breakdown section (heading + table), related metrics at the same level should have equivalent breakdowns. No orphaned totals without supporting detail.
+3. **Target layout analysis** — When comparing two designs, don't just list content differences. Analyze the TARGET's structural layout: section groupings, hierarchy levels, column counts, item organization. Map every structural difference as a required change.
 
 ## Guardrails
 - Do NOT change report data, logic, or backend code — only presentation.
