@@ -142,6 +142,14 @@ The `/improvement-loop` skill runs an autonomous product improvement cycle. See 
 - Broad product strategy pivots
 - Deleting user data or production databases
 
+## Parallelization Policy
+
+- **Maximize parallelism at all times.** When fixing multiple issues, spin up as many parallel agents as possible via TeamCreate. Never serialize work that can run concurrently.
+- **New user-reported issues → immediate background agent.** When the user posts a new issue mid-conversation, file a GH issue immediately, then evaluate whether to spin off a background agent to start fixing it. Never let a new issue block the main conversation thread.
+- **Evaluate agent count per issue.** For each new issue, assess: can this be fixed by one agent, or does it need frontend + backend agents in parallel? Spin off the right number.
+- **Never block the main thread.** The lead should remain responsive to the user. All implementation work should happen in teammate panes, not in the lead's thread.
+- **Batch independent fixes.** When the user asks to fix multiple issues, launch all agents simultaneously — don't wait for one to finish before starting the next.
+
 ## Skills
 
 Agents reference skills from `.claude/skills/` for shared procedures.

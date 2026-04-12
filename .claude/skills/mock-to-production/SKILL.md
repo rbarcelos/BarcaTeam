@@ -112,7 +112,33 @@ Compare mock properties against production components. Produce a **round report*
 
 Status values: `PRESENT` | `PARTIAL` (exists but structure wrong) | `MISSING` | `EXTRA` (in production but not in mock)
 
-#### 2B. Property Comparison
+#### 2B. Layout Structure Comparison (P1 — before property audit)
+
+**This step catches the highest-impact mismatches.** Before comparing individual CSS properties, compare the **DOM structure and layout model** of each section:
+
+```markdown
+### [Section Name] — Layout Audit
+
+| Aspect | Mock | Production | Status |
+|--------|------|------------|--------|
+| Container | flat (no wrapper) | boxed (bg/border/rounded) | MISMATCH |
+| Layout model | grid 2-col (.bk2) | flex column (single-col) | MISMATCH |
+| grid-template-columns | 1fr 1fr | — (not grid) | MISMATCH |
+| Row style | flat (padding 3px 0, border-bottom) | padded (px-9 py-5, divide-y) | MISMATCH |
+| Total row | spans both cols (bk-full) | separate bg section | MISMATCH |
+| Wrapper element | none | bg-slate-50 rounded-[7px] border | EXTRA |
+```
+
+**What to compare:**
+1. **Container existence** — does the mock use a wrapper box (bg, border, rounded) or flat rows? If production adds a wrapper the mock doesn't have, that's P1.
+2. **Layout model** — is it grid or flex? How many columns? What gap values?
+3. **Row structure** — flat rows (padding + border-bottom) vs contained rows (padded inside a bordered box with divide-y)?
+4. **Spanning elements** — do total/summary rows span all grid columns (grid-column: 1/-1)?
+5. **Nesting depth** — mock has 2 levels of nesting, production has 3? That's structural.
+
+**These mismatches are P1 — they must be fixed before any P2 property tweaks.** A single-column boxed layout vs a 2-column flat grid is visually dramatic even if every individual font-size and color matches.
+
+#### 2C. Property Comparison
 
 For **every section that is PRESENT or PARTIAL**, compare each CSS property:
 
@@ -130,7 +156,7 @@ For **every section that is PRESENT or PARTIAL**, compare each CSS property:
 
 Status: `MATCH` | `MISMATCH` | `MISSING` (in mock but not in production) | `EXTRA` (in production but not in mock)
 
-#### 2C. Content Comparison
+#### 2D. Content Comparison
 
 Compare text labels, button text, placeholder text:
 
@@ -142,7 +168,7 @@ Compare text labels, button text, placeholder text:
 | Label | "Loan Structure" | "Financing Details" | FinancingCard.tsx:88 |
 ```
 
-#### 2D. Round Verdict
+#### 2E. Round Verdict
 
 ```markdown
 ## Verdict — Round N
@@ -170,17 +196,30 @@ Reason: 1 missing section, 38 property mismatches, 2 content mismatches
 
 **Agent: senior-engineer** (multiple in parallel for independent components)
 
-Execute fixes based on the priority list from Phase 2D:
+Execute fixes based on the priority list from Phase 2E:
 
 #### Priority Rules
 
 1. **P0 first, always.** Missing sections must be implemented before any other work.
-2. **P1 before P2.** Structural layout fixes before individual property tweaks.
+2. **P1 before P2.** Structural layout fixes (from Phase 2B) before individual property tweaks.
 3. **Parallel by component.** One agent per component — never two agents touching the same file.
 4. **Atomic commits per component** with issue references.
 5. **Include data pipeline changes** when a mock field requires new backend data.
 6. **Include MCP tool changes** when a mock feature requires new agent capabilities.
 7. **Run `npx tsc --noEmit`** after each component to catch type errors immediately.
+
+#### P1 Layout Structure Fixes (common patterns)
+
+These are the most impactful fixes and must be done FIRST:
+
+| Mock pattern | Production anti-pattern | Fix |
+|---|---|---|
+| Flat rows (`.bk-row` with padding + border-bottom) | Rows inside boxed container (`bg-slate-50 rounded border divide-y`) | Remove wrapper, use inline `padding: "3px 0"; borderBottom: "1px solid #F1F5F9"` on each row |
+| 2-column grid (`.bk2`: `grid-template-columns: 1fr 1fr`) | Single-column flex layout | Convert to `display: "grid"; gridTemplateColumns: "1fr 1fr"; gap: "4px 12px"` |
+| Total row spanning grid (`.bk-full`: `grid-column: 1/-1`) | Separate total div with background | Use `gridColumn: "1 / -1"` + `borderTop: "1px solid #E2E8F0"` |
+| 2-column bar chart (`.bars2`) | Single-column bar list | Convert to `display: "grid"; gridTemplateColumns: "1fr 1fr"; gap: "3px 16px"` |
+
+**These changes are structural — they affect DOM nesting, not just class names.** Don't try to fix them with CSS property tweaks; restructure the JSX.
 
 #### What counts as a "fix"
 
@@ -278,7 +317,7 @@ When deciding what to fix first, follow this strict order:
 | Priority | Category | Description | Example |
 |----------|----------|-------------|---------|
 | **P0** | Missing sections | Section in mock but absent in production | No Regulations card at all |
-| **P1** | Structural mismatch | Section exists but has wrong layout or children | FinancingCard has 2x2 grid instead of flat rows |
+| **P1** | Structural/layout mismatch | Section exists but has wrong DOM structure, container wrapping, grid vs flex, column count, or row nesting | Mock uses 2-col flat grid (.bk2), production uses single-col boxed container. Mock has no wrapper, production adds bg/border/rounded box. |
 | **P2** | Property mismatch (high-impact) | Wrong font-size, wrong color, wrong spacing on key elements | Price font 30px instead of 22px |
 | **P3** | Content mismatch | Wrong text label, button label, placeholder | "Apply" instead of "Run What-If" |
 | **P4** | Property mismatch (low-impact) | Wrong letter-spacing, wrong transition, minor gap difference | letter-spacing 0.04em vs 0.02em |
@@ -309,6 +348,10 @@ When deciding what to fix first, follow this strict order:
 9. **Regressions are P0.** If fixing one thing breaks another, revert and re-approach.
 
 10. **Parallel agents, not serial rounds.** Fix multiple components simultaneously — one agent per component. The bottleneck is verification, not implementation.
+
+11. **Layout structure before properties.** A 2-column grid that looks right with wrong font colors is closer to the mock than a single-column list with perfect font colors. Always audit and fix the DOM structure (grid vs flex, column count, container wrapping, row nesting) BEFORE touching individual CSS properties. This is the most common class of "it doesn't look the same" — the CSS properties can be 95% matched and the user still sees a completely different layout.
+
+12. **Container wrapping is a bug.** If the mock uses flat rows with no wrapper (just border-bottom per row), production must NOT add a container box (bg, border, rounded corners). Adding wrapper elements that don't exist in the mock is a P1 structural mismatch.
 
 ---
 

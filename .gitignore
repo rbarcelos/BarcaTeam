@@ -20,3 +20,4 @@ test_report.html
 # Screenshots and E2E artifacts
 screenshots/
 *.png
+reviews/

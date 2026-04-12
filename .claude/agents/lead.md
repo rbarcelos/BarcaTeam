@@ -33,6 +33,7 @@ tools:
   - Agent(accessibility-reviewer)
   - Agent(copy-editor)
   - Agent(security-reviewer)
+  - Agent(ux-qa-tester)
   - AskUserQuestion
 memory: user
 skills:
