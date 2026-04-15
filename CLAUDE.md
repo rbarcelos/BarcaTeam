@@ -27,6 +27,12 @@ The lead MUST execute this checklist before spawning any agents:
 4. **Never trust "Spawned successfully"** — that message only means the pane was created, not that the agent process started.
 5. **Start the pane health loop:** After all agents are verified alive, run `/loop 5m /pane-health-check` to auto-monitor and respawn dead panes every 5 minutes. See `.claude/skills/pane-health-check/SKILL.md`.
 
+## Commit-First Policy
+
+- **Before making ANY code changes**, commit and push the current state first. This is non-negotiable.
+- Flow: new ask → `git status` → if dirty, stage + commit + push → then make edits.
+- This ensures a clean checkpoint exists before every change, enabling easy revert and comparison.
+
 ## Worktree Policy
 
 - **Never create worktrees inside the repo** (e.g., `.claude/worktrees/`). This causes nested git state issues and crashes psmux.
