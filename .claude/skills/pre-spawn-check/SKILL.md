@@ -18,6 +18,25 @@ On 2026-04-23 the lead pane crashed with a `kXH → ek → kXH` infinite-render 
 - MANDATORY before autonomous runs >20 tool calls (improvement loop, review loop, etc.)
 - On session start, after reading the session checkpoint
 
+## Portable JSON Validation
+
+This box runs Git Bash on Windows. `jq` is NOT installed, but `node` is. All JSON checks below use node via a helper shim. Define it once at the top of the check session:
+
+```bash
+# pjv = portable JSON validator: echoes parsed JSON (or selects a field) or fails
+# Usage: pjv FILE            -> validates (exits non-zero if invalid)
+#        pjv FILE 'sel.code'  -> prints node's JSON.parse(fs.readFileSync(FILE)).sel.code
+pjv() {
+  local WIN_PATH
+  WIN_PATH=$(cygpath -w "$1" 2>/dev/null || echo "$1")
+  if [ -z "$2" ]; then
+    node -e "try{JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));process.exit(0)}catch(e){console.error(e.message);process.exit(1)}" "$WIN_PATH"
+  else
+    node -e "const o=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));const v=(()=>{try{return eval('o.'+process.argv[2])}catch(e){return undefined}})();if(v==null)process.exit(0);if(typeof v==='string')console.log(v);else console.log(JSON.stringify(v))" "$WIN_PATH" "$2"
+  fi
+}
+```
+
 ## Procedure
 
 Execute checks in order. Stop on the first `✗` and remediate before continuing.
@@ -27,8 +46,8 @@ Execute checks in order. Stop on the first `✗` and remediate before continuing
 ```bash
 LOCK=.claude/scheduled_tasks.lock
 if [ -f "$LOCK" ]; then
-  PID=$(jq -r .pid "$LOCK" 2>/dev/null)
-  AT=$(jq -r .acquiredAt "$LOCK" 2>/dev/null)
+  PID=$(pjv "$LOCK" 'pid')
+  AT=$(pjv "$LOCK" 'acquiredAt')
   NOW_MS=$(($(date +%s) * 1000))
   AGE_MIN=$(( (NOW_MS - AT) / 60000 ))
   if [ -n "$PID" ]; then
@@ -51,23 +70,23 @@ echo "✓ scheduled_tasks.lock clean"
 ```bash
 for f in ~/.claude/settings.json .claude/settings.json .claude/settings.local.json; do
   [ -f "$f" ] || continue
-  jq empty "$f" 2>/dev/null || { echo "✗ malformed JSON in $f"; exit 1; }
+  pjv "$f" || { echo "✗ malformed JSON in $f"; exit 1; }
 done
 echo "✓ all settings files parse"
 ```
 
 ### Check 3 — Hook scripts exist
 
-Extract every `command` path referenced by hooks, strip shell quoting, verify the file exists.
+Extract every `command` path referenced by hooks via node, strip shell quoting, verify the file exists.
 
 ```bash
+HOOK_EXTRACT="const o=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));const hooks=o.hooks||{};for(const k of Object.keys(hooks))for(const g of (hooks[k]||[]))for(const h of (g.hooks||[]))if(h.command)console.log(h.command)"
 for f in ~/.claude/settings.json .claude/settings.json .claude/settings.local.json; do
   [ -f "$f" ] || continue
-  jq -r '.hooks // {} | to_entries[] | .value[].hooks[]?.command // empty' "$f" 2>/dev/null | while read -r cmd; do
-    # extract first token (the script path), trim quotes
+  WIN_F=$(cygpath -w "$f" 2>/dev/null || echo "$f")
+  node -e "$HOOK_EXTRACT" "$WIN_F" 2>/dev/null | while read -r cmd; do
     script=$(echo "$cmd" | awk '{print $1}' | tr -d '"'"'")
     [ -z "$script" ] && continue
-    # skip built-in shell commands
     case "$script" in bash|sh|pwsh|powershell|cmd|node|python|python3) continue ;; esac
     [ -f "$script" ] || { echo "✗ hook script missing: $script (in $f)"; exit 1; }
   done
