@@ -21,11 +21,12 @@ Agent teams are enabled. Ask Claude to spawn a team and describe what you want i
 
 The lead MUST execute this checklist before spawning any agents:
 
-1. **Re-read the "Psmux Agent Launch Bug" section below.** Agent tool spawns create panes but agents FAIL to start on Windows.
-2. **After `Agent` spawns:** immediately run `tmux send-keys` workaround for EACH agent pane (see workaround section below).
-3. **Verify each pane is alive:** `tmux capture-pane -t barcateam:0.N -p -S -5` — look for the Claude Code UI, not idle PowerShell prompts.
-4. **Never trust "Spawned successfully"** — that message only means the pane was created, not that the agent process started.
-5. **Start the pane health loop:** After all agents are verified alive, run `/loop 5m /pane-health-check` to auto-monitor and respawn dead panes every 5 minutes. See `.claude/skills/pane-health-check/SKILL.md`.
+1. **Run `/pre-spawn-check`** — validates harness health (stale locks, settings JSON, hook scripts, MEMORY.md size, worktree placement). Stop on any `✗` and remediate before spawning. See `.claude/skills/pre-spawn-check/SKILL.md`. Skipping this is how the lead pane crashed on 2026-04-23.
+2. **Re-read the "Psmux Agent Launch Bug" section below.** Agent tool spawns create panes but agents FAIL to start on Windows.
+3. **After `Agent` spawns:** immediately run `tmux send-keys` workaround for EACH agent pane (see workaround section below).
+4. **Verify each pane is alive:** `tmux capture-pane -t barcateam:0.N -p -S -5` — look for the Claude Code UI, not idle PowerShell prompts.
+5. **Never trust "Spawned successfully"** — that message only means the pane was created, not that the agent process started.
+6. **Start the pane health loop:** After all agents are verified alive, run `/loop 5m /pane-health-check` to auto-monitor and respawn dead panes every 5 minutes. See `.claude/skills/pane-health-check/SKILL.md`.
 
 ## Commit-First Policy
 
@@ -42,7 +43,7 @@ The lead MUST execute this checklist before spawning any agents:
 ## Session Persistence
 
 - **Use the `session-checkpoint` skill** for all checkpoint operations. It defines when to write, when to read, the format, and the crash recovery protocol.
-- **Before spawning teams or starting major work**, write a session checkpoint to memory (`project_session_checkpoint.md`) with: active capability, current plan, issue status, and next steps.
+- **You MUST write a session checkpoint** before `TeamCreate`, before starting `/loop`, and before any autonomous run >20 tool calls. If no checkpoint exists at those boundaries, write one first — no exceptions. Lead-pane crashes are silent: without a checkpoint there is no way to recover state.
 - **On session start**, read the checkpoint to recover context from any prior crash.
 - **Update the checkpoint** after every major milestone (issue closed, PR merged, plan changed).
 - **CRITICAL: Before context compaction**, always trigger the `session-checkpoint` skill to write a snapshot. Context compaction loses conversation history — the checkpoint is the only way to recover state. This applies to both automatic compaction (approaching context limits) and manual compaction.
