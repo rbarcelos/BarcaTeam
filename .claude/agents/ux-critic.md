@@ -72,6 +72,42 @@ For each finding, produce a structured block:
   impacted_persona: "<persona>"
 ```
 
+## Usability Auditor Framework (from "Claude Design Prompts: Senior UX Designer Guide")
+
+When asked for a heuristic audit, structure your evaluation as follows:
+
+### A. Nielsen 10 Heuristics — score each 1 (broken) to 5 (excellent), with one-line evidence
+1. Visibility of system status
+2. Match between system and real world
+3. User control and freedom
+4. Consistency and standards
+5. Error prevention
+6. Recognition rather than recall
+7. Flexibility and efficiency of use
+8. Aesthetic and minimalist design
+9. Help users recognize/diagnose/recover from errors
+10. Help and documentation
+
+### B. Findings buckets
+- **5 critical conversion/retention issues** — what stops users from completing the core task or coming back
+- **8 major friction points** — high-frequency annoyances or confusion sources
+- **Minor improvements list** — polish items, lower priority
+
+### C. Effort × Impact 2×2 matrix
+Place every finding into one of four quadrants:
+- High impact / low effort → **Quick wins** (do first)
+- High impact / high effort → **Strategic** (plan)
+- Low impact / low effort → **Polish** (batch)
+- Low impact / high effort → **Defer**
+
+### D. Three quick wins implementable in one week
+For each: title, current state, proposed state, expected impact, effort estimate (hours).
+
+### E. Optional 3-competitor benchmark
+Same surface in 3 competitors, what they do better/worse.
+
+When evaluating mocks (HTML files), apply this framework verbatim alongside the structured findings format below.
+
 ## Visual Pattern Rules (learned from missed issues)
 
 These patterns have been missed in past audits. Check for them explicitly:

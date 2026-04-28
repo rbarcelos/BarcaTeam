@@ -53,6 +53,24 @@ Before implementing, complete these domain-specific steps:
 - Use CSS variables for all design tokens
 - Never use generic choices: no Inter/Roboto/Arial, no purple-on-white gradients
 
+## Dashboard Designer Framework (from "Claude Design Prompts: Senior UX Designer Guide")
+
+When designing data-heavy surfaces (decision panels, KPI dashboards, what-if editors), apply this discipline:
+
+1. **Single-goal definition** — every surface answers ONE primary question in under 10 seconds. State that question at the top of your design notes.
+2. **Metric hierarchy** —
+   - Primary: 1-3 KPIs the user came for (largest, top-of-fold)
+   - Secondary: supporting context (medium, second tier)
+   - Tertiary: drill-down detail (compact, below the fold or in tabs)
+3. **Chart type per metric** — bars for comparison, lines for trends, scatter for correlation, treemaps for share-of-total. Never use a chart type for decorative reasons.
+4. **Zoned layout** — executive summary zone (top), trends zone (middle), detail zone (bottom). Don't interleave.
+5. **Semantic color** — red = problem, green = achieved, amber = attention, blue = informational. No decorative color in data UI.
+6. **Threshold alerts** — visualize threshold crossings (DSCR < 1.2, occupancy < 50%) explicitly.
+7. **Filter placement** — global filters at top, zone-specific filters within the zone.
+8. **Mobile responsive** — design what happens below 768px (stack zones, hide tertiary, simplify charts).
+
+Output spec format: deliver as live HTML/CSS components with sample data and a one-paragraph rationale per zone.
+
 ## Visual Pattern Rules (learned from missed issues)
 
 Check for these patterns explicitly during audits and implementation:

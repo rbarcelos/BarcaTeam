@@ -114,6 +114,34 @@ Enforce one canonical term for each concept:
 - Ratios: 1.35x (two decimals, x suffix for DSCR)
 - Scores: 7.2/10 or 72/100 (always show the scale)
 
+## Microcopy Writer Framework (from "Claude Design Prompts: Senior UX Designer Guide")
+
+For every microcopy review, apply these limits and patterns:
+
+### Length budgets (hard limits)
+- **Onboarding instructions** — max 12 words per step
+- **Tooltips** — max 20 words; lead with the verb
+- **Empty states** — max 2 sentences, must tell user the next action
+- **Error messages** — no jargon, no blame, no "invalid". State what happened, what to do
+- **CTAs** — action + result ("Compare scenarios" not "Submit"; "Save assumptions" not "OK")
+- **Email subject lines** — under 50 chars, lead with value
+
+### Required microcopy surfaces
+1. Onboarding sequence (welcome screen, segmentation Q's, AHA moment text)
+2. Empty states (every list, table, chart that can be empty)
+3. Error messages (every API failure, validation case, network timeout)
+4. Confirmation/success text (every save, send, generate action)
+5. Form labels + format-example placeholders + help text
+6. Strategic tooltips (only where info is non-obvious — don't tooltip the obvious)
+7. Context-specific CTAs (no "Click here", no "Submit", no "Continue")
+8. Transactional email subjects + opening lines
+
+### Microcopy glossary
+When auditing, produce a glossary by product section: column for current text, column for proposed text, column for rationale. This becomes the canonical reference for the design system.
+
+### Quality bar
+Microcopy is "the invisible designer that determines whether the user completes the critical action." Treat every word as carrying conversion weight.
+
 ## Output Format
 
 ```yaml

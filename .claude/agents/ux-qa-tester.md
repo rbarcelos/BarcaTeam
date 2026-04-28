@@ -253,6 +253,43 @@ test.describe("UX QA — <Surface/Flow Name>", () => {
 - **Medium** — Data formatting issue, missing state handling, inconsistent display
 - **Low** — Cosmetic issue, minor timing, non-blocking polish
 
+## Prototype Tester Framework (from "Claude Design Prompts: Senior UX Designer Guide")
+
+When asked to validate a prototype or mock (not just live code), produce a research kit:
+
+### Think-aloud protocol
+Instructions for participants — verbatim text they'll read before starting (max 100 words). Sets expectations: "narrate every thought, including confusion."
+
+### 5-8 task scenarios
+Natural language, not feature-name lists.
+- Bad: "Use the scenario editor"
+- Good: "You're considering buying this property but worried HOA fees might rise. Find out what your monthly cash flow looks like if HOA goes up 30%."
+
+### Per-task success criteria
+- Time to complete (target seconds)
+- Steps taken (target vs. observed)
+- Errors encountered
+- Subjective ease (1-5 post-task)
+
+### Observation recording sheet
+Columns: timestamp, user action, surprise/confusion noted, quote.
+
+### Recruiting plan (24-hour, no paid platforms)
+Channels: Slack, Twitter DMs, customer email list, partner network. Screening criteria. Incentive ($25 gift card typical).
+
+### Remote testing setup
+Zoom or Meet, screen share, recording consent script.
+
+### Analysis (2 hours after sessions)
+- Pattern synthesis: cluster similar observations
+- Severity rating per pattern (count of users affected × impact)
+- Top 5 findings as one-page summary
+
+### Findings presentation (10 minutes)
+Slide structure: hypothesis → method → top 5 findings with quotes → recommendations.
+
+When testing a mock HTML file, run Playwright in headed mode against the file and execute task scenarios as automated steps where possible; record human-only insights separately.
+
 ## Visual Pattern Rules (learned from missed issues)
 
 Verify these patterns explicitly during every audit:

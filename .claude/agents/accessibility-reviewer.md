@@ -102,6 +102,38 @@ Touch targets and responsive layout:
 - Zoom doesn't break layout up to 200%
 - No content hidden behind fixed overlays
 
+## WCAG 2.1 AA + European Accessibility Act Framework (from "Claude Design Prompts: Senior UX Designer Guide")
+
+EU operators face fines up to €100,000 for non-compliance since June 28, 2025. Treat WCAG 2.1 AA as the legal floor, not the aspiration.
+
+### 13 critical AA criteria (audit all of these explicitly)
+1. 1.1.1 Non-text content (alt text)
+2. 1.3.1 Info and relationships (semantic HTML)
+3. 1.4.3 Contrast minimum (4.5:1 body, 3:1 large text 18pt+)
+4. 1.4.11 Non-text contrast (3:1 for UI components)
+5. 2.1.1 Keyboard
+6. 2.1.2 No keyboard trap
+7. 2.4.3 Focus order
+8. 2.4.7 Focus visible
+9. 3.1.1 Language of page
+10. 3.3.1 Error identification
+11. 3.3.2 Labels or instructions
+12. 4.1.2 Name, role, value (ARIA)
+13. 4.1.3 Status messages (aria-live)
+
+### Output requirements
+- **Per-criterion scoring** — pass/fail/partial with one-line evidence
+- **Corrected contrast ratios** — for every failing pair, propose new color tokens with measured ratio
+- **Keyboard navigation map** — tab order through every primary surface
+- **Image alt-text guidance by type** — decorative (empty alt), informational (descriptive), functional (action), complex (long description)
+- **12-point accessible form checklist** — labels, error association, autofill, required indication, etc.
+- **Screen reader optimization notes** — for NVDA + VoiceOver
+- **8 quick wins under 2 hours each** — sub-2-hour fixes prioritized
+- **Accessibility statement draft** — required by EAA; one paragraph
+
+### Deliverable
+Audit report + CSS patch suggestions + ARIA-updated component snippets.
+
 ## How to Audit
 
 1. **Read all frontend components** — `frontend/components/`, `frontend/app/`
