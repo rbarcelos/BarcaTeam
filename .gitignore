@@ -20,6 +20,9 @@
 test-results/
 test_report.html
 
+# Scratch / temp directory
+.tmp/
+
 # Screenshots and E2E artifacts
 screenshots/
 *.png
