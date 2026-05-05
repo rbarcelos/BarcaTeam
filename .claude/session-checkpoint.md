@@ -1,11 +1,31 @@
 # Session Checkpoint
 
-**Updated:** 2026-05-04 23:50
+**Updated:** 2026-05-05 10:55
 **Lead session id:** 9ae9684b-9e3e-4b6b-95ca-41c2e54cd11d
 
 ## Active work
 
-**Status:** ✅ COMPLETE — v6.5 epic #2407 closed at ~100% mock parity, all 5 phases passed, 15 commits landed.
+**Status:** 🔄 v6.6 in flight — closing residual ~2% gap from v6.5 close-out.
+
+**v6.6 epic:** #2430 — InsightPanel v6.6 — close residual ~2% mock parity gap
+**Master HEAD at v6.6 start:** `a2cbf4b2`
+**v6.5 epic (closed):** #2407 — 15 commits landed, all 5 phases GREEN
+
+### v6.6 Lanes (parallel)
+- **Lane H** (HOA bylaw family, atomic): #2417 + #2425 + #2428 — backend compliance
+- **Lane F** (FIRPTA): #2426 — backend compliance, separate provider
+- **Lane FE** (frontend): #2429 — verdict-derivations.ts source provenance
+- **Lane V** (verify, ux-qa-tester): fresh-eyes audit on master HEAD `a2cbf4b2` (subsumes Round 5)
+
+### Stop conditions
+- All 5 v6.6 issues closed with tests
+- Lane V returns 0 P0/P1 (matches v6.5 R4 GREEN)
+- Phase 5A re-trace flips 4 ❌ → ✅
+- No regressions
+
+---
+
+**v6.5 prior context (kept for reference):**
 
 **Goal:** Run /mock-to-production convergence loop for `frontend/public/mocks/insightpanel-v6-overhaul.html` (3,673 lines) until 100% parity vs production InsightPanel components — IN PARALLEL WITH fixing all GH issues filed in last 2 days.
 
