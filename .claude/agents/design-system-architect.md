@@ -14,6 +14,12 @@ memory: user
 skills:
   - context-discovery
   - team-handoff
+  - frontend-design
+  - uupm-design-system
+  - uupm-design
+  - uupm-brand
+plugins:
+  - context7@claude-plugins-official
 ---
 
 ## MANDATORY Bootstrap (do this FIRST, before any other work)

@@ -15,6 +15,9 @@ skills:
   - context-discovery
   - security-audit
   - team-handoff
+plugins:
+  - security-guidance@claude-plugins-official
+  - context7@claude-plugins-official
 ---
 
 ## MANDATORY Bootstrap (do this FIRST, before any other work)

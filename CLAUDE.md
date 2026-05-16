@@ -106,6 +106,26 @@ tmux send-keys -t barcateam:0.N "\$env:CLAUDECODE='1'; \$env:CLAUDE_CODE_EXPERIM
 - If a pane dies, recreate it with `tmux split-window -t barcateam:0 -v`
 - Verify agents are running: `tmux capture-pane -t barcateam:0.N -p -S -5`
 
+## Plugins & Skills
+
+Plugins are installed in `~/.claude/plugins/` from the `claude-plugins-official` marketplace. Use them per the routing below.
+
+| Capability | Plugin / Skill | When the lead must invoke it |
+|---|---|---|
+| Current library docs (version-aware) | `context7` (MCP) via `docs-resolver` agent | Before any engineer writes code against an external library that may have changed (Next.js, React, Anthropic SDK, Playwright, FastAPI, SQLAlchemy, Pydantic, OpenAI SDK). Engineer is responsible for invoking; lead reminds in dispatch prompt. |
+| Browser automation / live verify | `playwright` plugin OR `webapp-testing` skill | Required for `live-visual-qa`, `ux-qa-tester`. Required for every ux-engineer change before "ready to merge". |
+| Pre-merge review gate | `pr-review-toolkit` via `pr-merger` agent | **Mandatory** for every PR > 1 file or > 30 LOC. Route between "engineer reports PR ready" and `gh pr merge`. No exceptions. |
+| Security-sensitive edits | `security-guidance` hooks (passive) | Active on any edit touching auth, server endpoints, secrets, subprocess, file system, SQL, prompt construction. Hooks warn passively — engineer must resolve every warning before requesting sign-off. |
+| TS / Python symbol intelligence | `typescript-lsp`, `pyright-lsp` | Engineers + architect use for impact analysis, especially when CodeGraph isn't initialized or doesn't cover a symbol. |
+| UI / UX design intelligence | `frontend-design` (built-in), `uupm-design`, `uupm-design-system`, `uupm-brand`, `uupm-banner-design` skills | `ux-engineer`, `design-system-architect`, `ux-critic` reference these when polishing surfaces or evaluating consistency. |
+| Repo memory health | `claude-md-management` | Architect runs it quarterly OR after major refactors. Lead invokes it when stale CLAUDE.md is suspected (e.g., agents keep making wrong recommendations). |
+| Repo automation audit | `claude-code-setup` | One-shot per repo. Run once to surface hook/skill/MCP gaps; commit recommendations to `docs/claude-code-setup-recommendations.md` for follow-up. |
+
+### Hard rules
+- **Never skip the pre-merge gate.** Two regressions in this codebase came from un-reviewed merges (the EarningsCard `-X theirs` overwrite, the dropped `submarketLabel`). The `pr-merger` agent exists to catch this class.
+- **Engineers must invoke `docs-resolver` before coding against any fast-moving library.** Training-data API recall is unreliable for libraries that ship breaking changes.
+- **Live-verify ALL UI changes before marking a PR ready.** Typecheck alone is insufficient — past PRs passed types but rendered broken UI.
+
 ## Cross-Repo Standards
 
 - **Always read and follow each target repo's `.github/` conventions** before filing issues, making commits, or opening PRs. Specifically:

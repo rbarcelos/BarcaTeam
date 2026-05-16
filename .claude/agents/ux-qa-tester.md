@@ -15,6 +15,9 @@ skills:
   - context-discovery
   - automated-ux-audit
   - team-handoff
+  - webapp-testing
+plugins:
+  - playwright@claude-plugins-official
 ---
 
 ## MANDATORY Bootstrap (do this FIRST, before any other work)

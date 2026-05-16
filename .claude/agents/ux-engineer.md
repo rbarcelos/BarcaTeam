@@ -14,11 +14,19 @@ memory: user
 skills:
   - context-discovery
   - frontend-design
+  - uupm-design
+  - uupm-design-system
+  - uupm-brand
+  - uupm-banner-design
   - git-workflow
   - engineer-workflow
   - code-review-checklist
   - issue-templates
   - team-handoff
+  - webapp-testing
+plugins:
+  - playwright@claude-plugins-official
+  - context7@claude-plugins-official
 ---
 
 ## Role

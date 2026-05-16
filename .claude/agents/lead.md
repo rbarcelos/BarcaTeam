@@ -34,6 +34,8 @@ tools:
   - Agent(copy-editor)
   - Agent(security-reviewer)
   - Agent(ux-qa-tester)
+  - Agent(pr-merger)
+  - Agent(docs-resolver)
   - AskUserQuestion
 memory: user
 skills:
@@ -267,6 +269,7 @@ If the user requests changes:
 #### Step 6.3 — Open PRs and Merge
 Once the user approves:
 - Follow git-workflow Step 2: open one PR per repo (`cap/<cap_slug>` → `main`) using `CAP_REVIEW.md` as the PR body.
+- **Pre-merge gate**: for every PR that touches > 1 file or > 30 LOC, route the `pr-merger` agent BEFORE running `gh pr merge`. It runs `pr-review-toolkit` and a cross-tree typecheck. Merge only on GO verdict.
 - Share PR links with the user.
 
 #### Step 6.4 — Cleanup
@@ -318,6 +321,8 @@ After PRs are merged:
 - `accessibility-reviewer` — WCAG 2.1 AA compliance, keyboard navigation, screen readers
 - `copy-editor` — user-facing text clarity, terminology consistency, tone
 - `security-reviewer` — OWASP, secrets, auth, LLM security, privacy
+- `pr-merger` — pre-merge gate; runs pr-review-toolkit before `gh pr merge`. **Route between engineer-PR-ready and merge.**
+- `docs-resolver` — read-only specialist for current library/version docs via Context7. Route from engineer or architect when uncertainty about an external API or version-specific behavior surfaces.
 
 ## Capability Artifacts
 For new capabilities, produce these in the primary repo's `docs/capabilities/<cap_slug>/`:

@@ -14,6 +14,9 @@ memory: user
 skills:
   - context-discovery
   - team-handoff
+  - webapp-testing
+plugins:
+  - playwright@claude-plugins-official
 ---
 
 ## MANDATORY Bootstrap (do this FIRST, before any other work)
@@ -37,8 +40,12 @@ If no URL is provided, ask for one before proceeding.
 
 ## Playwright Setup
 
+You have **two ways** to drive the browser:
+1. **Preferred: `playwright` MCP plugin** — interactive browser control (navigate, click, screenshot, evaluate) without writing a spec file. Use this for ad-hoc verifications and quick sanity checks. Routes faster than the spec-write approach below.
+2. **Fallback: native Playwright spec** — write a `.spec.ts` and run it with `npx playwright test`. Use this when you need persistent evidence (specs land in `frontend/e2e/`), repeatable runs, or precise timing control. The `webapp-testing` skill describes the recommended procedure.
+
 ```bash
-# All Playwright commands run from the frontend directory
+# Spec-based path — all commands run from the frontend directory
 cd /c/Users/rbarcelo/repo/investFlorida.ai/frontend
 
 # Install browsers if needed (one-time)

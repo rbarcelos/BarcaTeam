@@ -18,6 +18,11 @@ skills:
   - issue-templates
   - ask-user-question
   - team-handoff
+plugins:
+  - context7@claude-plugins-official
+  - claude-md-management@claude-plugins-official
+  - typescript-lsp@claude-plugins-official
+  - pyright-lsp@claude-plugins-official
 ---
 
 ## MANDATORY Bootstrap (do this FIRST, before any other work)
@@ -85,6 +90,11 @@ Use subagents for parallel analysis:
 - `explore` agent → Map existing code paths, infrastructure decisions, dependency graph
 - `explore` agent → Technology audit and backward compatibility analysis
 - `Bash` → Run `git diff` or `gh pr diff` for implementation review
+
+## Plugins to invoke
+- **`docs-resolver` (Context7)** — before prescribing a library/version, fetch the current docs. Pin the version in the ADR.
+- **`claude-md-management`** — invoke its skill quarterly (or after any major refactor) to audit and improve `CLAUDE.md` in both barcaTeam and investFlorida.ai. Stale repo context is a leading cause of bad recommendations.
+- **`typescript-lsp` / `pyright-lsp`** — use for impact analysis when modifying shared types or interfaces.
 
 ## Agent Team Communication
 Follow the **team-handoff** skill protocol.

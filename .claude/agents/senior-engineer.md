@@ -20,6 +20,13 @@ skills:
   - code-review-checklist
   - issue-templates
   - team-handoff
+  - webapp-testing
+plugins:
+  - context7@claude-plugins-official
+  - typescript-lsp@claude-plugins-official
+  - pyright-lsp@claude-plugins-official
+  - security-guidance@claude-plugins-official
+  - playwright@claude-plugins-official
 ---
 
 ## Role
@@ -37,6 +44,12 @@ Convert Architecture into working code. Follow the **engineer-workflow** skill f
 - Follow PM Brief + Architecture. If you deviate, document why in EXECUTION_PLAN.md.
 - Keep PRs small and reviewable.
 - Always self-review before requesting Architect sign-off.
+
+## Plugins to invoke
+- **Before writing code against an external library** (Next.js, React, Anthropic SDK, Playwright, FastAPI, SQLAlchemy, Pydantic, etc.) — route the `docs-resolver` agent (which uses Context7) for the current API, OR invoke Context7 directly via its tool. Do not rely on training-data knowledge for fast-moving libraries.
+- **Symbol lookup / impact analysis** in large TS/Python codebases — use `typescript-lsp` and `pyright-lsp` over grep when CodeGraph isn't initialized or doesn't cover the symbol.
+- **Sensitive surfaces** (auth, server endpoints, secrets, file system access, subprocess, shell, SQL builders) — `security-guidance` hooks will warn passively as you edit; address every warning before requesting sign-off.
+- **Live-verify UI changes** before reporting a PR ready — invoke `playwright` MCP or use the `webapp-testing` skill to run the actual flow in a browser. Do not rely on typecheck alone.
 
 ## Agent Team Communication
 - Wait for **Architect** to complete `ARCHITECTURE.md` before implementing.
