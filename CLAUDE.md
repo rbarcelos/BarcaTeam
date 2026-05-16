@@ -28,6 +28,17 @@ The lead MUST execute this checklist before spawning any agents:
 5. **Never trust "Spawned successfully"** — that message only means the pane was created, not that the agent process started.
 6. **Start the pane health loop:** After all agents are verified alive, run `/loop 5m /pane-health-check` to auto-monitor and respawn dead panes every 5 minutes. See `.claude/skills/pane-health-check/SKILL.md`.
 
+## Session Bootstrap
+
+Run on every new lead session, in order:
+
+```bash
+git worktree prune                   # clear stale worktrees from prior crashes
+ls .claude/session-checkpoint.md     # read it if present (see session-checkpoint skill)
+```
+
+Then run `/pre-spawn-check` once before the first `TeamCreate` of the session.
+
 ## Commit-First Policy
 
 - **Before making ANY code changes**, commit and push the current state first. This is non-negotiable.
@@ -36,9 +47,10 @@ The lead MUST execute this checklist before spawning any agents:
 
 ## Worktree Policy
 
-- **Never create worktrees inside the repo** (e.g., `.claude/worktrees/`). This causes nested git state issues and crashes psmux.
-- **Use a temp directory outside the repo** for worktrees: `$TEMP/barcateam-worktrees/` (or `$env:TEMP\barcateam-worktrees\` on PowerShell).
-- Clean up stale worktrees on session start with `git worktree prune`.
+- **Use the `git-workflow` skill for all worktree operations.** The `agent-worktree` skill is deprecated — do not read it.
+- **Worktrees live under `<repo>/.claude/worktrees/<name>/`.** The directory is gitignored. This matches reality (Agent tool's `isolation: worktree` writes here) and avoids cross-drive path issues that the temp-dir rule caused.
+- **Always `git worktree prune` on session start** to clear stale entries from prior crashes.
+- **Locked worktrees:** if a worktree shows `[locked]` in `git worktree list`, unlock it (`git worktree unlock <path>`) before re-spawning the agent.
 
 ## Session Persistence
 
@@ -121,6 +133,8 @@ Plugins are installed in `~/.claude/plugins/` from the `claude-plugins-official`
 | Repo memory health | `claude-md-management` | Architect runs it quarterly OR after major refactors. Lead invokes it when stale CLAUDE.md is suspected (e.g., agents keep making wrong recommendations). |
 | Repo automation audit | `claude-code-setup` | One-shot per repo. Run once to surface hook/skill/MCP gaps; commit recommendations to `docs/claude-code-setup-recommendations.md` for follow-up. |
 
+> Run `claude plugin list` to see which of these are actually installed for your user. Do NOT invoke a plugin that is not in the list.
+
 ### Hard rules
 - **Never skip the pre-merge gate.** Two regressions in this codebase came from un-reviewed merges (the EarningsCard `-X theirs` overwrite, the dropped `submarketLabel`). The `pr-merger` agent exists to catch this class.
 - **Engineers must invoke `docs-resolver` before coding against any fast-moving library.** Training-data API recall is unreliable for libraries that ship breaking changes.
@@ -177,6 +191,19 @@ The `/improvement-loop` skill runs an autonomous product improvement cycle. See 
 - **Never block the main thread.** The lead should remain responsive to the user. All implementation work should happen in teammate panes, not in the lead's thread.
 - **Batch independent fixes.** When the user asks to fix multiple issues, launch all agents simultaneously — don't wait for one to finish before starting the next.
 
-## Skills
+## Skills Index
 
-Agents reference skills from `.claude/skills/` for shared procedures.
+All shared procedures live under `.claude/skills/<name>/SKILL.md`. Key ones:
+
+- `pre-spawn-check` — harness health gate before any team spawn
+- `pane-health-check` — periodic pane liveness verification (`/loop 5m`)
+- `session-checkpoint` — write/read checkpoint before compaction & spawns
+- `git-workflow` — worktree lifecycle, commits, PRs (replaces deprecated `agent-worktree`)
+- `engineer-workflow` — full execution loop for coding agents
+- `improvement-loop` — autonomous product improvement cycle
+- `issue-triage` — PM-driven triage of open GH issues
+- `mock-to-production` — 7-phase mock parity pipeline
+- `team-handoff` — handoff format between PM/Architect/Engineer/QA
+- `context-discovery` — standard repo/docs scan before capability work
+
+Run `ls .claude/skills/` for the full set.
