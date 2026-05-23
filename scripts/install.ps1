@@ -1,7 +1,7 @@
-# BarcaTeam — One-Command Install Script (Windows / PowerShell)
+# BarcaTeam -- One-Command Install Script (Windows / PowerShell)
 # Usage: .\scripts\install.ps1
 #
-# Idempotent — safe to re-run at any time.
+# Idempotent -- safe to re-run at any time.
 # Re-running skips already-configured components and reports green.
 
 Set-StrictMode -Version Latest
@@ -19,13 +19,7 @@ function Write-Info  { param([string]$msg) Write-Host "  [INFO] $msg" -Foregroun
 function Write-Step  { param([string]$msg) Write-Host "`n== $msg ==" -ForegroundColor White   }
 function Write-Banner {
     Write-Host ""
-    Write-Host "  ____                    _____                  " -ForegroundColor Cyan
-    Write-Host " | __ )  __ _ _ __ ___  |_   _|__  __ _ _ __ ___" -ForegroundColor Cyan
-    Write-Host " |  _ \ / _' | '__/ __|   | |/ _ \/ _' | '_ ' _ \" -ForegroundColor Cyan
-    Write-Host " | |_) | (_| | | | (__    | |  __/ (_| | | | | | |" -ForegroundColor Cyan
-    Write-Host " |____/ \__,_|_|  \___|   |_|\___|\__,_|_| |_| |_|" -ForegroundColor Cyan
-    Write-Host ""
-    Write-Host "  One-Command Install" -ForegroundColor White
+    Write-Host "  BarcaTeam -- One-Command Install" -ForegroundColor Cyan
     Write-Host ""
 }
 
@@ -38,8 +32,8 @@ function Test-Cmd { param([string]$Name) return $null -ne (Get-Command $Name -Er
 function Invoke-Step {
     param(
         [string]$Label,
-        [scriptblock]$Check,    # returns $true if already done (skip)
-        [scriptblock]$Action    # runs only if Check returns $false
+        [scriptblock]$Check,
+        [scriptblock]$Action
     )
     if (& $Check) {
         Write-Skip $Label
@@ -50,7 +44,7 @@ function Invoke-Step {
             Write-Pass $Label
             $script:pass++
         } catch {
-            Write-Fail "$Label — $_"
+            Write-Fail "$Label - $_"
             $script:fail++
         }
     }
@@ -84,7 +78,7 @@ if (Test-Cmd node) {
     $script:fail++; $preflight_ok = $false
 }
 
-# Python >= 3.11 (optional but recommended for dev-env.sh)
+# Python >= 3.11 (optional)
 if (Test-Cmd python) {
     $pyVer = (python --version 2>&1) -replace 'Python ',''
     $pyParts = $pyVer -split '\.'
@@ -92,11 +86,11 @@ if (Test-Cmd python) {
         Write-Pass "Python $pyVer (>= 3.11)"
         $script:pass++
     } else {
-        Write-Skip "Python $pyVer (< 3.11 — optional, upgrade at https://python.org if needed)"
+        Write-Skip "Python $pyVer (< 3.11, optional - upgrade at https://python.org if needed)"
         $script:skip++
     }
 } else {
-    Write-Skip "Python not found (optional — needed only for dev-env.sh)"
+    Write-Skip "Python not found (optional - needed only for dev-env.sh)"
     $script:skip++
 }
 
@@ -121,7 +115,7 @@ if (Test-Cmd claude) {
     Write-Pass "Claude CLI: $claudeVer"
     $script:pass++
 } else {
-    Write-Info "Claude CLI not found — installing via npm..."
+    Write-Info "Claude CLI not found - installing via npm..."
     try {
         npm install -g @anthropic-ai/claude-code
         Write-Pass "Claude CLI installed"
@@ -169,7 +163,7 @@ if (Test-Path $upgradePsmux) {
             & $upgradePsmux
         }
 } else {
-    Write-Skip "upgrade-psmux.ps1 not found — skip psmux capability config"
+    Write-Skip "upgrade-psmux.ps1 not found - skip psmux capability config"
     $script:skip++
 }
 
@@ -178,29 +172,39 @@ if (Test-Path $upgradePsmux) {
 # ---------------------------------------------------------------------------
 Write-Step "claude-ping (WhatsApp MCP server)"
 
-$claudePingDir = Join-Path $REPO_ROOT "claude-ping"
+$claudePingDir  = Join-Path $REPO_ROOT "claude-ping"
 $claudePingDist = Join-Path $claudePingDir "dist\mcp\server.js"
 
-Invoke-Step -Label "claude-ping dependencies installed" `
-    -Check  { Test-Path $claudePingDist } `
+Invoke-Step -Label "claude-ping submodule present" `
+    -Check  { Test-Path (Join-Path $claudePingDir "package.json") } `
     -Action {
-        if (-not (Test-Path $claudePingDir)) {
-            throw "claude-ping directory not found at $claudePingDir. Clone the submodule first: git submodule update --init"
-        }
-        Write-Info "Installing claude-ping npm deps..."
-        Push-Location $claudePingDir
-        try {
-            npm install
-            if (Test-Path (Join-Path $claudePingDir "package.json")) {
-                $pkg = Get-Content (Join-Path $claudePingDir "package.json") -Raw | ConvertFrom-Json
+        throw "claude-ping submodule not found at $claudePingDir. Run: git submodule update --init"
+    }
+
+# Only attempt build if package.json exists
+if (Test-Path (Join-Path $claudePingDir "package.json")) {
+    Invoke-Step -Label "claude-ping built (dist/mcp/server.js)" `
+        -Check  { Test-Path $claudePingDist } `
+        -Action {
+            Write-Info "Installing claude-ping npm deps and building..."
+            Push-Location $claudePingDir
+            try {
+                npm install
+                if ($LASTEXITCODE -ne 0) { throw "npm install failed (exit $LASTEXITCODE)" }
+                $pkgPath = Join-Path $claudePingDir "package.json"
+                $pkg = Get-Content $pkgPath -Raw | ConvertFrom-Json
                 if ($pkg.scripts.build) {
                     npm run build
+                    if ($LASTEXITCODE -ne 0) { throw "npm run build failed (exit $LASTEXITCODE)" }
                 }
+            } finally {
+                Pop-Location
             }
-        } finally {
-            Pop-Location
         }
-    }
+} else {
+    Write-Skip "claude-ping build (submodule not present - skipping)"
+    $script:skip++
+}
 
 # ---------------------------------------------------------------------------
 # Step 4: Verify .mcp.json is in place
@@ -212,7 +216,6 @@ $mcpJson = Join-Path $REPO_ROOT ".mcp.json"
 Invoke-Step -Label ".mcp.json present" `
     -Check  { Test-Path $mcpJson } `
     -Action {
-        # Should already be in the repo — if missing, write a minimal one
         $minimal = @{
             mcpServers = @{
                 "claude-ping" = @{
@@ -249,19 +252,18 @@ $requiredPlugins = @(
 $installedPluginsRaw = claude plugin list 2>&1
 foreach ($plugin in $requiredPlugins) {
     $shortName = $plugin -replace '@claude-plugins-official',''
-    $alreadyInstalled = $installedPluginsRaw | Select-String -Pattern [regex]::Escape($shortName) -Quiet
+    $alreadyInstalled = ($installedPluginsRaw | Select-String -Pattern ([regex]::Escape($shortName)) -Quiet)
     Invoke-Step -Label "plugin: $plugin" `
         -Check  { $alreadyInstalled } `
         -Action {
             Write-Info "Installing $plugin..."
-            # claude plugin install is interactive — wrap with --yes if supported
             $result = claude plugin install $plugin 2>&1
             Write-Info $result
         }
 }
 
 # ---------------------------------------------------------------------------
-# Step 6: Verify install with doctor
+# Step 6: Verify with doctor
 # ---------------------------------------------------------------------------
 Write-Step "Doctor verification"
 
@@ -270,7 +272,7 @@ if (Test-Path $doctorScript) {
     Write-Info "Running doctor..."
     & $doctorScript
 } else {
-    Write-Skip "doctor.ps1 not found — skipping"
+    Write-Skip "doctor.ps1 not found - skipping"
     $script:skip++
 }
 
@@ -280,7 +282,13 @@ if (Test-Path $doctorScript) {
 Write-Host ""
 Write-Host "===============================================" -ForegroundColor White
 Write-Host "  Install complete" -ForegroundColor White
-Write-Host "  Pass: $($script:pass)  Skip: $($script:skip)  Fail: $($script:fail)" -ForegroundColor $(if ($script:fail -gt 0) { "Red" } elseif ($script:skip -gt 0) { "Yellow" } else { "Green" })
+if ($script:fail -gt 0) {
+    Write-Host "  Pass: $($script:pass)  Skip: $($script:skip)  Fail: $($script:fail)" -ForegroundColor Red
+} elseif ($script:skip -gt 0) {
+    Write-Host "  Pass: $($script:pass)  Skip: $($script:skip)  Fail: $($script:fail)" -ForegroundColor Yellow
+} else {
+    Write-Host "  Pass: $($script:pass)  Skip: $($script:skip)  Fail: $($script:fail)" -ForegroundColor Green
+}
 Write-Host "===============================================" -ForegroundColor White
 Write-Host ""
 
@@ -293,13 +301,13 @@ if ($script:fail -gt 0) {
 
 Write-Host "  Next steps:" -ForegroundColor Cyan
 Write-Host "    1. Start BarcaTeam against your target repo(s):"
-Write-Host "         .\start.ps1 <repo-name-or-path>"
+Write-Host "         .\start.ps1 path\to\repo"
 Write-Host ""
 Write-Host "    2. Check install health any time:"
 Write-Host "         .\scripts\doctor.ps1"
 Write-Host ""
 Write-Host "    3. Configure WhatsApp (claude-ping):"
-Write-Host "         Open a Claude session with BarcaTeam — claude-ping will prompt you to scan a QR code."
+Write-Host "         Open a Claude session with BarcaTeam -- claude-ping will prompt for a QR code."
 Write-Host ""
 Write-Host "  See CLAUDE.md for advanced configuration."
 Write-Host ""

@@ -182,7 +182,7 @@ EXPECTED=(
     "CLAUDE.md"
     "start.ps1"
     ".github/copilot-instructions.md"
-    "agents/lead.agent.md"
+    ".claude/agents"
     ".claude/skills"
     "scripts/install.ps1"
     "scripts/install.sh"
