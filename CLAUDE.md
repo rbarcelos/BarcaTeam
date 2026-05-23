@@ -124,14 +124,24 @@ Plugins are installed in `~/.claude/plugins/` from the `claude-plugins-official`
 
 | Capability | Plugin / Skill | When the lead must invoke it |
 |---|---|---|
+| **Cross-file impact + call-chain intelligence** | **`gitnexus` CLI + MCP** (skills: `gitnexus-cli`, `gitnexus-debugging`, `gitnexus-exploring`, `gitnexus-impact-analysis`, `gitnexus-pr-review`, `gitnexus-refactoring`, `gitnexus-guide`) | **Mandatory** before any engineer edits a shared type, helper, prompt, or extraction contract. Use `gitnexus impact <symbol>` to surface ALL consumers BEFORE the fix lands — replaces blind grep. The lead MUST cite GitNexus in dispatch prompts for cross-file work. Pre-merge: `gitnexus detect-changes` maps git diff hunks to affected execution flows. Skills auto-trigger on relevant prompts. |
 | Current library docs (version-aware) | `context7` (MCP) via `docs-resolver` agent | Before any engineer writes code against an external library that may have changed (Next.js, React, Anthropic SDK, Playwright, FastAPI, SQLAlchemy, Pydantic, OpenAI SDK). Engineer is responsible for invoking; lead reminds in dispatch prompt. |
 | Browser automation / live verify | `playwright` plugin OR `webapp-testing` skill | Required for `live-visual-qa`, `ux-qa-tester`. Required for every ux-engineer change before "ready to merge". |
 | Pre-merge review gate | `pr-review-toolkit` via `pr-merger` agent | **Mandatory** for every PR > 1 file or > 30 LOC. Route between "engineer reports PR ready" and `gh pr merge`. No exceptions. |
 | Security-sensitive edits | `security-guidance` hooks (passive) | Active on any edit touching auth, server endpoints, secrets, subprocess, file system, SQL, prompt construction. Hooks warn passively — engineer must resolve every warning before requesting sign-off. |
-| TS / Python symbol intelligence | `typescript-lsp`, `pyright-lsp` | Engineers + architect use for impact analysis, especially when CodeGraph isn't initialized or doesn't cover a symbol. |
+| TS / Python symbol intelligence | `typescript-lsp`, `pyright-lsp` | Engineers + architect use for impact analysis, especially when GitNexus / CodeGraph aren't initialized or don't cover a symbol. |
 | UI / UX design intelligence | `frontend-design` (built-in), `uupm-design`, `uupm-design-system`, `uupm-brand`, `uupm-banner-design` skills | `ux-engineer`, `design-system-architect`, `ux-critic` reference these when polishing surfaces or evaluating consistency. |
 | Repo memory health | `claude-md-management` | Architect runs it quarterly OR after major refactors. Lead invokes it when stale CLAUDE.md is suspected (e.g., agents keep making wrong recommendations). |
 | Repo automation audit | `claude-code-setup` | One-shot per repo. Run once to surface hook/skill/MCP gaps; commit recommendations to `docs/claude-code-setup-recommendations.md` for follow-up. |
+
+### GitNexus — first-class capability for cross-file work
+GitNexus indexes a repo into a knowledge graph (call chains, dependencies, clusters, execution flows). Once indexed (`gitnexus analyze` from the repo root), every dispatched agent has MCP access to the graph.
+
+**Hard rule:** Before any agent edits a symbol that crosses 2+ files (shared types, helpers, prompts, extraction contracts, status fields, render gates), the dispatch prompt MUST instruct the agent to run `gitnexus impact <symbol>` first. This single check would have prevented the SSOT regression cascade observed across #2658, #2675, #2680, #2709, #2732, #2740, #2746, #2762, #2764 — each was a "fix landed but another consumer reads stale source" pattern.
+
+**Pre-merge pattern:** `gitnexus detect-changes` should run on every PR diff before merge. Catches BASE-mutation and predecessor-fallback regressions that the pre-merge gate alone misses.
+
+**Web UI:** `gitnexus serve` exposes a local server (default `http://localhost:4747`) that `gitnexus.vercel.app` connects to for visual exploration. Useful for ad-hoc questions; not in the autonomous loop.
 
 > Run `claude plugin list` to see which of these are actually installed for your user. Do NOT invoke a plugin that is not in the list.
 
@@ -139,6 +149,23 @@ Plugins are installed in `~/.claude/plugins/` from the `claude-plugins-official`
 - **Never skip the pre-merge gate.** Two regressions in this codebase came from un-reviewed merges (the EarningsCard `-X theirs` overwrite, the dropped `submarketLabel`). The `pr-merger` agent exists to catch this class.
 - **Engineers must invoke `docs-resolver` before coding against any fast-moving library.** Training-data API recall is unreliable for libraries that ship breaking changes.
 - **Live-verify ALL UI changes before marking a PR ready.** Typecheck alone is insufficient — past PRs passed types but rendered broken UI.
+- **GitNexus is mandatory first step for cross-file fixes.** When dispatching any agent whose work touches 2+ files (shared types, helpers, prompts, status fields, render gates, extraction contracts, fallback chains), the lead's dispatch prompt MUST include the boilerplate below. The agent must complete Step 0 and report findings BEFORE proposing or writing code.
+
+### Dispatch-prompt boilerplate (cross-file fixes)
+
+Paste this verbatim into every cross-file fix dispatch:
+
+```
+**Step 0 — GitNexus impact + context (mandatory, before any other work):**
+1. `gitnexus impact <primary_symbol>` — list every consumer / caller. Surface the BLAST RADIUS.
+2. `gitnexus context <primary_symbol>` — 360° view (callers, callees, processes).
+3. If your change touches a shape/contract (Pydantic model, TS type, prompt field, status enum): also run `gitnexus impact <field_name>` for the specific field.
+4. Report in your final return: (a) consumer list with file:line, (b) any consumers that look like they READ A STALE SOURCE (pattern: `?? someOldField`, `if (!x) x = ...`, deny-list checks), (c) confirmation that ALL consumers are covered by your fix OR a documented decision to skip a specific one with rationale.
+
+If GitNexus is unavailable (CLI errors / not indexed): fall back to a thorough grep but flag the gap clearly in your return. Don't pretend the audit happened.
+```
+
+This boilerplate enforces the lesson from the SSOT regression cascade (#2658, #2675, #2680, #2709, #2732, #2740, #2746, #2762, #2764) — every one of those was a missed consumer that `gitnexus impact` would have flagged in seconds.
 
 ## Cross-Repo Standards
 
