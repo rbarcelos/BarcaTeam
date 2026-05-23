@@ -4,11 +4,73 @@ BarcaTeam is an AI-powered software delivery team that lives in a single folder.
 
 It works with **Claude Code** and **GitHub Copilot CLI** using the same agent definitions.
 
-## Quick Start
+## Get Started (one command)
+
+```powershell
+# Windows (PowerShell)
+git clone <this-repo-url>
+cd barcaTeam
+.\scripts\install.ps1
+```
+
+```bash
+# Linux / macOS
+git clone <this-repo-url>
+cd barcaTeam
+./scripts/install.sh
+```
+
+The install script checks prerequisites, configures psmux/tmux, builds the WhatsApp MCP server, and installs all required Claude plugins. It is **idempotent** — safe to re-run at any time.
+
+Once installed, launch against your repo(s):
+
+```powershell
+.\start.ps1 C:\path\to\your\repo
+```
+
+Then just describe what you want and BarcaTeam does the rest.
+
+### Health check
+
+```powershell
+.\scripts\doctor.ps1   # Windows
+./scripts/doctor.sh    # Linux / macOS
+```
+
+Reports every component (green = OK, yellow = warning, red = broken) with a copy-paste fix command for each failure.
+
+## Troubleshooting
+
+### Windows: `claude` not found after install
+Node.js was likely installed after the current PowerShell session started. Restart PowerShell and re-run `install.ps1`.
+
+### psmux agent panes launch but agents never start
+psmux strips backslashes from Windows paths when generating pane commands. After `TeamCreate` completes, manually re-launch each pane with `tmux send-keys`. See the **Psmux Agent Launch Bug** section in `CLAUDE.md` for the exact commands.
+
+### claude-ping / WhatsApp QR code prompt
+On first run, claude-ping will prompt you to scan a WhatsApp QR code. Open a Claude session with BarcaTeam and the prompt will appear automatically. Subsequent sessions auto-authenticate from the saved session.
+
+### GitNexus install errors
+BarcaTeam no longer depends on GitNexus directly. If an older install guide referenced it, ignore that step — `install.ps1` covers all required setup.
+
+### Plugin install is interactive
+`claude plugin install` may prompt for confirmation. If running in CI or a non-interactive shell, install plugins manually:
+```
+claude plugin install context7@claude-plugins-official
+claude plugin install playwright@claude-plugins-official
+claude plugin install pr-review-toolkit@claude-plugins-official
+claude plugin install security-guidance@claude-plugins-official
+claude plugin install typescript-lsp@claude-plugins-official
+claude plugin install pyright-lsp@claude-plugins-official
+claude plugin install claude-md-management@claude-plugins-official
+claude plugin install claude-code-setup@claude-plugins-official
+```
+
+## Usage
 
 ```bash
 # Claude Code (full agent team orchestration)
-start-claude.cmd C:\path\to\repo1 C:\path\to\repo2
+.\start.ps1 C:\path\to\repo1 C:\path\to\repo2
 
 # Copilot CLI (agents via @mention)
 start-copilot.cmd C:\path\to\repo1 C:\path\to\repo2
