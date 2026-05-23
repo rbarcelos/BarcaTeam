@@ -60,8 +60,11 @@ Plus direct push: `f5cd57b4` — V7 Wave 1 (Zones 1+2, heuristic defects fixed b
 
 ## Next session — first moves
 1. Read this checkpoint
-2. Decide on #2782 implementation path (county scraping vs paid provider) before resuming wave 2
-3. If #2782 deferred long: consider building PR-C anyway with Zone 1 KPIs still showing placeholders for shock banner (the depreciation + after-tax-IRR halves can ship independently)
+2. **#2782 PIVOTED to US-wide** (product is WhatIfInvestments.ai, not Florida-only). FL cap math dropped. Per-county scraping infeasible nationally (~3000 counties). Lead decision: explore free/aggregate sources FIRST before paid providers.
+3. Free sources to scope: Lincoln Institute (state effective rates), Census ACS B25103 (county median property tax), big-metro open-data portals, RealtyMole free tier.
+4. Paid fallback if coverage insufficient: ATTOM Data (~$2-5k/mo, ~155M properties, best coverage).
+5. Zone 1 shock banner deferred indefinitely — needs per-state reassessment rule data (CA Prop 13 vs TX resets vs most-states no-shock). Separate follow-up to be filed.
+6. PR-C Zones 4+5 are federal (FIRPTA, MACRS, W-8ECI) — nation-agnostic, can ship without #2782. Zone 1 ships with shock-banner placeholder + working depreciation/after-tax-IRR halves.
 
 ## In-flight worktrees / branches
 - Local `.claude/worktrees/refactor-str-tax-consolidate-retry/` still has the unsquashed copy of #2773's work (now redundant — #2774 cherry-pick is on main). Safe to `git worktree remove`.
