@@ -60,11 +60,13 @@ Plus direct push: `f5cd57b4` — V7 Wave 1 (Zones 1+2, heuristic defects fixed b
 
 ## Next session — first moves
 1. Read this checkpoint
-2. **#2782 PIVOTED to US-wide** (product is WhatIfInvestments.ai, not Florida-only). FL cap math dropped. Per-county scraping infeasible nationally (~3000 counties). Lead decision: explore free/aggregate sources FIRST before paid providers.
-3. Free sources to scope: Lincoln Institute (state effective rates), Census ACS B25103 (county median property tax), big-metro open-data portals, RealtyMole free tier.
-4. Paid fallback if coverage insufficient: ATTOM Data (~$2-5k/mo, ~155M properties, best coverage).
-5. Zone 1 shock banner deferred indefinitely — needs per-state reassessment rule data (CA Prop 13 vs TX resets vs most-states no-shock). Separate follow-up to be filed.
-6. PR-C Zones 4+5 are federal (FIRPTA, MACRS, W-8ECI) — nation-agnostic, can ship without #2782. Zone 1 ships with shock-banner placeholder + working depreciation/after-tax-IRR halves.
+2. **#2782 LOCKED to FREE-ONLY US-wide** (no paid providers per lead decision 2026-05-23).
+3. **Phase 1 (next session):** Census ACS B25103 county effective rate provider + Lincoln Institute state CAGR provider + estimator service. ~1-2 days. Unblocks Zone 3 nationally with estimated numbers + honest provenance.
+4. Data ceiling acknowledged: per-property assessed value unavailable outside ~10 big-metro open-data portals. Outside those, we estimate from county medians.
+5. **Phase 2 (follow-ups):** Per-property adapters for top US metros (Miami-Dade, NYC, LA, Cook, SF, Maricopa, Dallas, Harris, Suffolk, King, Fulton). One issue per metro, 1-2 days each. Switches confidence from 'medium' to 'high' when matched.
+6. **Phase 3 (far follow-up):** Per-state reassessment classifier table for Zone 1 shock banner. Covers CA Prop 13, TX, FL Save Our Homes, NY classification etc.
+7. PR-C Zone 4 + Zone 5 (federal: FIRPTA/MACRS/W-8ECI) ship independently of #2782. Zone 1 ships with depreciation + after-tax-IRR halves working, shock banner placeholder.
+8. Ad valorem KV grid DROPPED from Zone 3 — needs parcel-specific data not available free.
 
 ## In-flight worktrees / branches
 - Local `.claude/worktrees/refactor-str-tax-consolidate-retry/` still has the unsquashed copy of #2773's work (now redundant — #2774 cherry-pick is on main). Safe to `git worktree remove`.
