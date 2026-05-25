@@ -1,6 +1,6 @@
 ---
 name: e2e-live-qa
-description: Run Playwright critical-flow E2E tests against the live investFlorida.ai dev server (port 3000). Manual on-demand. 17 scenarios cover landing rendering, demo chips, anonymous quota gate, allowlist + non-allowlist sign-in, session tabs, WhatIf dirty guard, sign-out flow, the "money path" cluster (address submit, Redfin URL paste, verdict pill), and the "trust signal" cluster (source dots coverage, cash-flow formula integrity, listing cross-check), plus the "backend/auth" cluster (anon→authed migration, quota OAuth handoff, cookie middleware regression guard). Per epics rbarcelos/investFlorida.ai#2883, #2894.
+description: Run Playwright critical-flow E2E tests against the live investFlorida.ai dev server (port 3000). Manual on-demand. 22 scenarios cover landing rendering, demo chips, anonymous quota gate, allowlist + non-allowlist sign-in, session tabs, WhatIf dirty guard, sign-out flow, the "money path" cluster (address submit, Redfin URL paste, verdict pill), the "trust signal" cluster (source dots coverage, cash-flow formula integrity, listing cross-check), the "backend/auth" cluster (anon→authed migration, quota OAuth handoff, cookie middleware regression guard), and the "product" cluster (chat roundtrip with citations, session list update, no-NaN display guard, scenario switch KPI update, whatif create end-to-end). Per epics rbarcelos/investFlorida.ai#2883, #2894.
 ---
 
 # E2E Live QA
@@ -10,7 +10,7 @@ On-demand Playwright critical-flow runner. The skill drives the test suite at `i
 ## Trigger
 
 The skill activates when:
-- User types `/e2e-live-qa` — runs **all 17 scenarios**
+- User types `/e2e-live-qa` — runs **all 22 scenarios**
 - User types `/e2e-live-qa <scenario>` — runs **one scenario** by name (without `.spec.ts`)
 - User says "run e2e tests", "run the critical-flow suite", "test the landing page", "verify sign-in still works", or similar
 
@@ -39,6 +39,11 @@ The skill activates when:
 | 15 | `anon-to-authed-migration` | Anonymous session created before sign-in migrates to authed user's list after dev-login (guards #2787 `migrate_anonymous_data`) |
 | 16 | `quota-cta-starts-oauth` | After quota hit, form shows sign-in CTA; clicking it navigates to `/auth/google/login` (guards conversion path) |
 | 17 | `cookie-middleware-regression` | Fresh anon POST → 201 + HttpOnly cookie; same jar second POST → 403 + sign_in_required; fresh jar still succeeds (guards #2896 CookieIdentityMiddleware) |
+| 18 | `chat-roundtrip-with-citations` | Dev-login → Brickell session → ask cash flow question → AI responds within 45 s → citations present (guards anti-hallucination brand promise) |
+| 19 | `session-list-shows-newly-created` | Dev-login → POST /chat/sessions → reload /app → new session link appears within 5 s (guards "did it save?" user trust moment) |
+| 20 | `no-null-or-nan-rendered` | Brickell demo session → all tabs → no `$NaN`, `NaN`, `undefined`, or `null` as standalone tokens in visible text (runtime display-layer leak detector) |
+| 21 | `scenario-switch-updates-kpis` | Brickell session → What-If tab → click Conservative pill → `data-testid="vk-cashflow-value"` changes → switch back to Base → value restored (guards scenario no-op regression) |
+| 22 | `whatif-create-end-to-end` | Brickell session → open editor → edit ADR → enter name → click Save → new scenario tab appears in ScenarioPillBar (guards silent create-drop regression) |
 
 If a scenario in the list isn't yet implemented in `frontend/e2e/critical-flows/`, treat it as a skipped row in the report and continue with the rest.
 
