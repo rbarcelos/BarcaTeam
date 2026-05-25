@@ -1,6 +1,6 @@
 ---
 name: e2e-live-qa
-description: Run Playwright critical-flow E2E tests against the live investFlorida.ai dev server (port 3000). Manual on-demand. 14 scenarios cover landing rendering, demo chips, anonymous quota gate, allowlist + non-allowlist sign-in, session tabs, WhatIf dirty guard, sign-out flow, the "money path" cluster (address submit, Redfin URL paste, verdict pill), and the "trust signal" cluster (source dots coverage, cash-flow formula integrity, listing cross-check). Per epics rbarcelos/investFlorida.ai#2883, #2894.
+description: Run Playwright critical-flow E2E tests against the live investFlorida.ai dev server (port 3000). Manual on-demand. 17 scenarios cover landing rendering, demo chips, anonymous quota gate, allowlist + non-allowlist sign-in, session tabs, WhatIf dirty guard, sign-out flow, the "money path" cluster (address submit, Redfin URL paste, verdict pill), and the "trust signal" cluster (source dots coverage, cash-flow formula integrity, listing cross-check), plus the "backend/auth" cluster (anon→authed migration, quota OAuth handoff, cookie middleware regression guard). Per epics rbarcelos/investFlorida.ai#2883, #2894.
 ---
 
 # E2E Live QA
@@ -10,7 +10,7 @@ On-demand Playwright critical-flow runner. The skill drives the test suite at `i
 ## Trigger
 
 The skill activates when:
-- User types `/e2e-live-qa` — runs **all 14 scenarios**
+- User types `/e2e-live-qa` — runs **all 17 scenarios**
 - User types `/e2e-live-qa <scenario>` — runs **one scenario** by name (without `.spec.ts`)
 - User says "run e2e tests", "run the critical-flow suite", "test the landing page", "verify sign-in still works", or similar
 
@@ -36,6 +36,9 @@ The skill activates when:
 | 12 | `source-dots-coverage` | Brickell demo session renders ≥5 SourceBadgeDots with non-empty, recognised tooltip labels (catches silent fallback chain regressions) |
 | 13 | `cash-flow-formula-integrity` | Brickell demo session Cash flow tab: cap rate plausible [1–20%], implied monthly debt > 0 (no sign error), gross annual revenue in plausible range |
 | 14 | `listing-cross-check` | Brickell demo session Property tab values match backend session context (price ±$1, beds exact, baths ±0.5, sqft ±5, HOA ±$25) |
+| 15 | `anon-to-authed-migration` | Anonymous session created before sign-in migrates to authed user's list after dev-login (guards #2787 `migrate_anonymous_data`) |
+| 16 | `quota-cta-starts-oauth` | After quota hit, form shows sign-in CTA; clicking it navigates to `/auth/google/login` (guards conversion path) |
+| 17 | `cookie-middleware-regression` | Fresh anon POST → 201 + HttpOnly cookie; same jar second POST → 403 + sign_in_required; fresh jar still succeeds (guards #2896 CookieIdentityMiddleware) |
 
 If a scenario in the list isn't yet implemented in `frontend/e2e/critical-flows/`, treat it as a skipped row in the report and continue with the rest.
 
