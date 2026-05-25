@@ -1,6 +1,6 @@
 ---
 name: e2e-live-qa
-description: Run Playwright critical-flow E2E tests against the live investFlorida.ai dev server (port 3000). Manual on-demand. 8 scenarios cover landing rendering, demo chips, anonymous quota gate, allowlist + non-allowlist sign-in, session tabs, WhatIf dirty guard, and sign-out flow. Per epic rbarcelos/investFlorida.ai#2883.
+description: Run Playwright critical-flow E2E tests against the live investFlorida.ai dev server (port 3000). Manual on-demand. 11 scenarios cover landing rendering, demo chips, anonymous quota gate, allowlist + non-allowlist sign-in, session tabs, WhatIf dirty guard, sign-out flow, and the "money path" cluster (address submit, Redfin URL paste, verdict pill). Per epic rbarcelos/investFlorida.ai#2883.
 ---
 
 # E2E Live QA
@@ -10,7 +10,7 @@ On-demand Playwright critical-flow runner. The skill drives the test suite at `i
 ## Trigger
 
 The skill activates when:
-- User types `/e2e-live-qa` — runs **all 8 scenarios**
+- User types `/e2e-live-qa` — runs **all 11 scenarios**
 - User types `/e2e-live-qa <scenario>` — runs **one scenario** by name (without `.spec.ts`)
 - User says "run e2e tests", "run the critical-flow suite", "test the landing page", "verify sign-in still works", or similar
 
@@ -30,6 +30,9 @@ The skill activates when:
 | 6 | `session-tabs-render` | Signed-in user opens session, all 5 tabs render with data |
 | 7 | `whatif-dirty-guard` | Edit WhatIf field → switch scenario → DiscardEditsDialog fires |
 | 8 | `signout-flow` | Sign out from `/app` → returns to `/` cleanly (no `?next=`) |
+| 9 | `address-submit-real` | Anonymous types a real (non-demo) address → `/session/<id>` with rendered verdict or dollar data |
+| 10 | `listing-url-paste` | Anonymous pastes a Redfin URL → `/session/<id>` with Redfin link preserved |
+| 11 | `verdict-pill-renders` | Brickell demo chip → `/session/<id>` → verdict badge shows "Go" or "Caution" |
 
 If a scenario in the list isn't yet implemented in `frontend/e2e/critical-flows/`, treat it as a skipped row in the report and continue with the rest.
 
