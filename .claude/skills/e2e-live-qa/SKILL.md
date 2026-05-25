@@ -53,13 +53,13 @@ Run these checks in order. **Stop and report to the user on the first failure** 
    ```
    Must return `200`. If not, message the user: "Backend FastAPI not responding on :8000. Start it with `cd /c/Users/rbarcelo/repo/investFlorida.ai/backend && uvicorn server.app:app --reload` and re-invoke."
 
-3. **`ENABLE_DEV_LOGIN=true` in the dev-server's environment.**
-   The dev-login endpoint is gated and returns 404 when disabled. The skill cannot enable it for a server that's already running — it must be set when the dev server boots. To check, hit the dev-login route with an invalid payload:
+3. **`ENABLE_DEV_LOGIN=true` in the backend's environment.**
+   The dev-login endpoint lives on the FastAPI backend (`apps/chat/api/routes/auth.py`) — NOT the Next.js frontend. It is gated by `_dev_login_enabled()` and returns 404 when `ENABLE_DEV_LOGIN` is unset or in production. The skill cannot enable it for a server that's already running — it must be set when the backend boots. To check, hit the backend dev-login route with an invalid payload:
    ```bash
-   curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:3000/auth/dev-login -H "Content-Type: application/json" -d '{}'
+   curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:8000/auth/dev-login -H "Content-Type: application/json" -d '{}'
    ```
    - `400` or `422` → endpoint live (dev-login enabled). Proceed.
-   - `404` → dev-login disabled. Tell the user: "`ENABLE_DEV_LOGIN=true` is not set. Stop the dev server, prepend `ENABLE_DEV_LOGIN=true` to the `npm run dev` command (or set it in `.env.local`), and re-invoke."
+   - `404` → dev-login disabled. Tell the user: "`ENABLE_DEV_LOGIN=true` is not set on the **backend**. Stop uvicorn, then in the same PowerShell window run `$env:ENABLE_DEV_LOGIN=\"true\"; uvicorn server.app:app --reload` (from the backend root), and re-invoke."
 
 4. **Local `master` is up-to-date with `origin/master` in investFlorida.ai.**
    ```bash
@@ -71,14 +71,17 @@ Run these checks in order. **Stop and report to the user on the first failure** 
 
 Always operate from the investFlorida.ai frontend directory. Use absolute paths.
 
+**The critical-flows suite has its own Playwright config** (`playwright.critical-flows.config.ts`) — it disables the root config's `webServer` block (which boots a `next start` on :3002), pins `workers: 1`, sets `retries: 1`, and points `baseURL` at the live `:3000` dev server. **You MUST pass `--config=playwright.critical-flows.config.ts`** — without it, the root config takes over and every test fails with `ECONNREFUSED 127.0.0.1:3002`.
+
 **Run a single scenario:**
 ```bash
-cd /c/Users/rbarcelo/repo/investFlorida.ai/frontend && npx playwright test e2e/critical-flows/<scenario>.spec.ts --reporter=list
+cd /c/Users/rbarcelo/repo/investFlorida.ai/frontend && npx playwright test --config=playwright.critical-flows.config.ts <scenario>
 ```
+(The slug filters the testname; the config already restricts `testDir` to `e2e/critical-flows`.)
 
 **Run all scenarios:**
 ```bash
-cd /c/Users/rbarcelo/repo/investFlorida.ai/frontend && npx playwright test e2e/critical-flows/ --reporter=list
+cd /c/Users/rbarcelo/repo/investFlorida.ai/frontend && npx playwright test --config=playwright.critical-flows.config.ts
 ```
 
 Capture full stdout. Playwright writes:
