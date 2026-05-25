@@ -1,6 +1,6 @@
 ---
 name: e2e-live-qa
-description: Run Playwright critical-flow E2E tests against the live investFlorida.ai dev server (port 3000). Manual on-demand. 11 scenarios cover landing rendering, demo chips, anonymous quota gate, allowlist + non-allowlist sign-in, session tabs, WhatIf dirty guard, sign-out flow, and the "money path" cluster (address submit, Redfin URL paste, verdict pill). Per epic rbarcelos/investFlorida.ai#2883.
+description: Run Playwright critical-flow E2E tests against the live investFlorida.ai dev server (port 3000). Manual on-demand. 14 scenarios cover landing rendering, demo chips, anonymous quota gate, allowlist + non-allowlist sign-in, session tabs, WhatIf dirty guard, sign-out flow, the "money path" cluster (address submit, Redfin URL paste, verdict pill), and the "trust signal" cluster (source dots coverage, cash-flow formula integrity, listing cross-check). Per epics rbarcelos/investFlorida.ai#2883, #2894.
 ---
 
 # E2E Live QA
@@ -10,7 +10,7 @@ On-demand Playwright critical-flow runner. The skill drives the test suite at `i
 ## Trigger
 
 The skill activates when:
-- User types `/e2e-live-qa` — runs **all 11 scenarios**
+- User types `/e2e-live-qa` — runs **all 14 scenarios**
 - User types `/e2e-live-qa <scenario>` — runs **one scenario** by name (without `.spec.ts`)
 - User says "run e2e tests", "run the critical-flow suite", "test the landing page", "verify sign-in still works", or similar
 
@@ -33,6 +33,9 @@ The skill activates when:
 | 9 | `address-submit-real` | Anonymous types a real (non-demo) address → `/session/<id>` with rendered verdict or dollar data |
 | 10 | `listing-url-paste` | Anonymous pastes a Redfin URL → `/session/<id>` with Redfin link preserved |
 | 11 | `verdict-pill-renders` | Brickell demo chip → `/session/<id>` → verdict badge shows "Go" or "Caution" |
+| 12 | `source-dots-coverage` | Brickell demo session renders ≥5 SourceBadgeDots with non-empty, recognised tooltip labels (catches silent fallback chain regressions) |
+| 13 | `cash-flow-formula-integrity` | Brickell demo session Cash flow tab: cap rate plausible [1–20%], implied monthly debt > 0 (no sign error), gross annual revenue in plausible range |
+| 14 | `listing-cross-check` | Brickell demo session Property tab values match backend session context (price ±$1, beds exact, baths ±0.5, sqft ±5, HOA ±$25) |
 
 If a scenario in the list isn't yet implemented in `frontend/e2e/critical-flows/`, treat it as a skipped row in the report and continue with the rest.
 
@@ -192,7 +195,9 @@ This skill does NOT:
 
 ## Related
 
-- Epic: `rbarcelos/investFlorida.ai#2883`
+- Epic (money path): `rbarcelos/investFlorida.ai#2883`
+- Epic (trust signal cluster): `rbarcelos/investFlorida.ai#2894`
 - Allowlist gate: `rbarcelos/investFlorida.ai#2787`
 - Orphan dev-server detection: `rbarcelos/investFlorida.ai#2835`
+- Listing cross-check bugs: `rbarcelos/investFlorida.ai#2864`
 - Skill author: senior-engineer agent — Co-author: Opus 4.7
