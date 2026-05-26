@@ -1,6 +1,6 @@
 ---
 name: e2e-live-qa
-description: Run Playwright critical-flow E2E tests against the live investFlorida.ai dev server (port 3000). Manual on-demand. 22 scenarios cover landing rendering, demo chips, anonymous quota gate, allowlist + non-allowlist sign-in, session tabs, WhatIf dirty guard, sign-out flow, the "money path" cluster (address submit, Redfin URL paste, verdict pill), the "trust signal" cluster (source dots coverage, cash-flow formula integrity, listing cross-check), the "backend/auth" cluster (anon→authed migration, quota OAuth handoff, cookie middleware regression guard), and the "product" cluster (chat roundtrip with citations, session list update, no-NaN display guard, scenario switch KPI update, whatif create end-to-end). Per epics rbarcelos/investFlorida.ai#2883, #2894.
+description: Run Playwright critical-flow E2E tests against the live investFlorida.ai dev server (port 3000). Manual on-demand. 42 scenarios cover landing rendering, demo chips, anonymous quota gate, allowlist + non-allowlist sign-in, session tabs, WhatIf dirty guard, sign-out flow, the "money path" cluster (address submit, Redfin URL paste, verdict pill), the "trust signal" cluster (source dots coverage, cash-flow formula integrity, listing cross-check), the "backend/auth" cluster (anon→authed migration, quota OAuth handoff, cookie middleware regression guard), the "product" cluster (chat roundtrip with citations, session list update, no-NaN display guard, scenario switch KPI update, whatif create end-to-end), the "SSOT/data-integrity" cluster (pydantic schema drift canary, NOI-revenue invariant, verdict+KPI-band agreement, reload stability, override badge tracking), the "auth/concurrency/migration" cluster (cookie middleware canary, concurrent write isolation, multi-window sign-out propagation, OAuth CSRF rejection, db migration backward compat, nickname+overrides survive relogin), the "persona/decision-flow" cluster (DSCR breakdown visible, mobile quota CTA tap target, anon→authed data continuity, international FIRPTA flags, STR occupancy stress test, buyer-agent side-by-side isolation), and the "trust/provenance" cluster (disclaimer footer on every decision surface, source dot never silently falls to default, extraction source attribution roundtrip, citations resolve to live source). Per epics rbarcelos/investFlorida.ai#2883, #2894.
 ---
 
 # E2E Live QA
@@ -10,7 +10,7 @@ On-demand Playwright critical-flow runner. The skill drives the test suite at `i
 ## Trigger
 
 The skill activates when:
-- User types `/e2e-live-qa` — runs **all 22 scenarios**
+- User types `/e2e-live-qa` — runs **all 42 scenarios**
 - User types `/e2e-live-qa <scenario>` — runs **one scenario** by name (without `.spec.ts`)
 - User says "run e2e tests", "run the critical-flow suite", "test the landing page", "verify sign-in still works", or similar
 
@@ -44,6 +44,28 @@ The skill activates when:
 | 20 | `no-null-or-nan-rendered` | Brickell demo session → all tabs → no `$NaN`, `NaN`, `undefined`, or `null` as standalone tokens in visible text (runtime display-layer leak detector) |
 | 21 | `scenario-switch-updates-kpis` | Brickell session → What-If tab → click Conservative pill → `data-testid="vk-cashflow-value"` changes → switch back to Base → value restored (guards scenario no-op regression) |
 | 22 | `whatif-create-end-to-end` | Brickell session → open editor → edit ADR → enter name → click Save → new scenario tab appears in ScenarioPillBar (guards silent create-drop regression) |
+| 23 | `pydantic-schema-drift-canary` | GET /chat/sessions/{id} returns all 10 FullSessionResponse required fields with correct types; hydration_status is in the documented allow-list; context numeric fields are finite (catches #2658–#2764 SSOT drift class) |
+| 24 | `noi-revenue-invariant` | 5 demo sessions: NOI ≤ Revenue, Revenue ≥ 0, OpEx ≥ 0, CapRate ∈ [0%,25%] on every session context (catches #2921 NOI>Revenue wholesale) |
+| 25 | `verdict-and-kpi-band-agree` | Brickell demo: verdict chip tier is a recognised value, KPI band cash-flow cell is non-empty, Cash flow tab has dollar content, and KPI value is stable before/after tab switch (catches SSOT multi-surface contradiction) |
+| 26 | `cookie-middleware-presence-canary` | Dev-login, clear ifai_uid, GET /chat/sessions → 200 (middleware resolves auth from ifai_session alone, guards #2896 CookieIdentityMiddleware installation) |
+| 27 | `concurrent-scenario-write-isolation` | Two browser contexts PATCH different assumption fields in parallel on same session → both values persist in override log (guards lost-update race condition) |
+| 28 | `multi-window-sign-out-propagation` | Sign in two contexts (A+B sharing token), sign out from A, verify context B's session list shrinks or returns 401 (guards server-side session revocation) |
+| 29 | `oauth-state-csrf-rejection` | Hit /auth/google/callback with tampered state param → 400 or error redirect, NOT 500 or successful login (guards CSRF protection in OAuth flow) |
+| 30 | `db-migration-backward-compat` | Authed user reads own session (200); anonymous user reads authed session (403/404 not 500); cross-anon session read (not 500) — guards post-migration-013 ownership enforcement |
+| 31 | `nickname-overrides-survive-relogin` | Set session nickname + 2 assumption overrides, sign out, sign back in → nickname + overrides intact in GET /chat/sessions/{id} (guards session data persistence across auth cycles) |
+| 26 | `numbers-stable-across-reload` | Load Brickell session, capture cap_rate + monthly_cash_flow + verdict, hard-reload, assert within ±0.1pp / ±$1 / exact tier (catches non-deterministic compute-path regression on reload) |
+| 27 | `override-badge-on-affected-kpis` | Dev-login → Brickell session → PATCH /assumptions ADR=$300 → GET /assumptions asserts source="override" for ADR → chat agent acknowledges override (catches silent override-badge regression PM #12) |
+| 32 | `share-session-immutability` | Create session → generate report snapshot → enable sharing → capture financial fingerprint from snapshot HTML → mutate source session (PATCH ADR +200%) → assert snapshot HTML is unchanged (catches #2911 shared-snapshot-leaks-live-state regression) |
+| 33 | `mortgage-manager-dscr-breakdown-visible` | P0 PM#5 — Brickell demo session: `kpi-dscr-value` tile is visible, displayed DSCR matches API value ±0.05, threshold text reflects pass/fail at 1.25 lender floor (guards #2491 DSCR-tile regression) |
+| 34 | `at-quota-cta-clickable-mobile` | P0 PM#10 — iPhone 375×812 viewport: quota CTA is in viewport, ≥44×44 tap target (WCAG 2.5.5), clicking triggers OAuth navigation to /auth/google/login (guards mobile conversion path) |
+| 35 | `anon-to-authed-data-continuity` | P0 Arch#8 — Anonymous session KPIs (cap_rate, monthly_cash_flow, verdict_label) survive sign-in migration unchanged (±0.1pp / ±$1 / exact tier) — guards data-loss on anon→authed transfer |
+| 36 | `international-investor-firpta-itin-flags` | P1 PM#4 — Apply international financing template → `compliance-chip-firpta` renders in compliance row, aria-label mentions FIRPTA/withholding (guards #2426 is_foreign_owner→FIRPTA chip chain) |
+| 37 | `str-operator-occupancy-stress-test` | P1 PM#6 — PATCH occupancy_pct to -20%: cash flow + DSCR re-render within 30 s; hard-reload shows stressed values persist in backend context_json (guards override persistence + recompute pipeline) |
+| 38 | `buyer-agent-side-by-side-two-addresses` | P1 PM#7 — Two independent browser contexts on two sessions: KPI values are independent, override on context A does not affect context B (guards React/API-level cross-session isolation) |
+| 39 | `disclaimer-footer-on-every-decision-surface` | P0 PM#1 — Landing footer legal disclaimer visible; session InsightPanel "Estimates only" strip persists on all tabs + WhatIf editor open (trust/provenance cluster) |
+| 40 | `source-dot-never-silently-falls-to-default` | P0 PM#3 — All SourceBadgeDots in "default" state on Brickell demo must show non-empty modelRationale in tooltip body — no silent amber dot with blank explanation |
+| 41 | `extraction-source-attribution-roundtrip` | P1 Arch#9 — Brickell demo session context: price_source populated + not "unknown" after hydration; critical fields accounted for; ≥1 SourceBadgeDot renders (end-to-end extraction provenance chain) |
+| 42 | `citations-resolve-to-live-source` | P1 PM#15 — All external citation links (target=_blank) on Brickell demo session are valid http/https URLs with no dead-link patterns (localhost, example.com, placeholder) |
 
 If a scenario in the list isn't yet implemented in `frontend/e2e/critical-flows/`, treat it as a skipped row in the report and continue with the rest.
 
