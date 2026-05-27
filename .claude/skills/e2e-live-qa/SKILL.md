@@ -10,7 +10,7 @@ On-demand Playwright critical-flow runner. The skill drives the test suite at `i
 ## Trigger
 
 The skill activates when:
-- User types `/e2e-live-qa` — runs **all 47 scenarios**
+- User types `/e2e-live-qa` — runs **all 49 scenarios**
 - User types `/e2e-live-qa <scenario>` — runs **one scenario** by name (without `.spec.ts`)
 - User says "run e2e tests", "run the critical-flow suite", "test the landing page", "verify sign-in still works", or similar
 
@@ -71,6 +71,8 @@ The skill activates when:
 | 45 | `error-telemetry-emission` | P1 Arch#10 — Empty POST /chat/sessions returns structured 4xx JSON (not opaque 500); invalid email to /chat/waitlist returns 422 with detail/error field; WaitlistForm logs console.error('[waitlist] POST failed') on !res.ok (feedback_log_network_errors rule). |
 | 46 | `waitlist-form-captures-email-on-non-allowlist` | P1 PM#13 — Submit a non-allowlisted email to /waitlist form → 200/201 response + "on the list" confirmation copy appears; /waitlist?from=oauth&email=X pre-fills email field from query param. |
 | 47 | `redfin-building-currently-listed` | P1 #2955 — Brickell condo: POST /chat/sessions with listing_url → hydration complete → context.redfin_building.currently_listed_in_building is a number ≥ 0 → PropertyTab BuildingProfile renders /currently listed/i row (verifies BuildingPageService wiring in hydration pipeline). |
+| 48 | `redfin-building-same-building-comps` | P1 #2956 (Slice B) — Brickell demo session → SoldCompsCard renders "Same building" filter chip when ≥1 comp has same_building=true → activate chip → all visible rows have data-same-building="true" → "All" chip restores full list. Graceful skip when Slice A (#2856-A) not yet merged. |
+| 49 | `redfin-building-hoa-tooltip` | P1 #2956 (Slice B) — Brickell demo session → HOADetailsCard renders [data-testid="hoa-building-avg-tooltip"] with "Building avg" text + non-zero n value + dollar amount when building_avg_hoa_fee present. Graceful skip when Slice A not yet merged. |
 
 If a scenario in the list isn't yet implemented in `frontend/e2e/critical-flows/`, treat it as a skipped row in the report and continue with the rest.
 
