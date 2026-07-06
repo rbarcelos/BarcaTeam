@@ -96,15 +96,28 @@ All agents run **concurrently**. No agent sees another's proposal.
 
 ### PHASE 3: CONSOLIDATION
 
-**PM agent** reads all proposals and produces a consolidated draft:
-1. Identify convergence — where do multiple agents agree?
-2. Identify conflicts — pick winners with rationale
-3. Synthesize into a single unified proposal
-4. Flag open questions for user
+**PM agent** reads all proposals and produces:
+1. `consolidated-proposal.md` — convergence, resolved conflicts, open questions for user, synthesized spec
+2. `consolidated-mock.html` — standalone HTML mock matching the consolidated spec
+
+Both files are mandatory. The HTML mock at this phase is a working visual representation reviewers can critique alongside the MD in Phase 4 — not just a final-phase polish artifact.
 
 **UX Engineer** reviews the PM's draft for visual coherence and feasibility.
 
-**Output:** `reviews/ux-proposals/{sprint-name}/consolidated-proposal.md`
+**HTML mock requirements (same standard at every phase that produces one):**
+- Standalone, opens in any browser, no build step
+- Inline CSS (Google Fonts only for external deps — use the product's actual font stack)
+- Realistic data (use real sample addresses / actual product values)
+- Reuse the product's existing design tokens (read `frontend/lib/tokens.ts` or equivalent for exact hex values)
+- No emoji icons (inline SVG only — Lucide-style paths)
+- All relevant states (loading, empty, populated, error if applicable)
+- At least 2 breakpoints (desktop default + ≤768px mobile via media queries)
+- Inspectable — DevTools shows exact CSS values
+- Annotation section at the bottom: design decisions, copy choices, proposer attribution
+
+**Outputs:**
+- `reviews/ux-proposals/{sprint-name}/consolidated-proposal.md`
+- `reviews/ux-proposals/{sprint-name}/consolidated-mock.html`
 
 ---
 
@@ -127,16 +140,11 @@ All reviewers run **concurrently**.
 
 ### PHASE 5: FINAL PROPOSAL + HTML MOCK
 
-**PM** incorporates review feedback into a final spec.
+**PM** incorporates Phase 4 review feedback into a final spec.
 
-**UX Engineer** builds a **standalone HTML mock** that:
-- Opens in any browser with no build step
-- Uses inline CSS (no external dependencies except Google Fonts)
-- Shows realistic data (not lorem ipsum)
-- Includes all relevant states (loading, empty, populated, error if applicable)
-- Matches the existing product's design language when context is provided
-- Is inspectable — reviewers can open DevTools and see exact CSS values
-- Includes an annotation section at the bottom explaining key design decisions
+**UX Engineer** updates the HTML mock from Phase 3 (or rebuilds it) per the final spec. Same HTML mock standards as Phase 3 (see above). This is the polished, production-fidelity version — every state, every breakpoint, every interaction described.
+
+**Note:** the HTML mock is NOT introduced for the first time at Phase 5. Phase 3 already produced a working mock; Phase 5 refines it.
 
 **Output:**
 - `reviews/ux-proposals/{sprint-name}/FINAL-PROPOSAL.md` — implementation spec
