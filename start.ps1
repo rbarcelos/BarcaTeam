@@ -1,147 +1,74 @@
-# BarcaTeam Workspace Launcher (psmux — native Windows, no WSL)
-# Usage: .\start.ps1 [--reset] [-Session <name>] <repo1> [repo2] ...
+# BarcaTeam Workspace Launcher (GitHub Copilot CLI)
+# Usage: .\start.ps1 <repo1> [repo2] ...
 # Example: .\start.ps1 COEPEMP
 #          .\start.ps1 investFlorida.ai str_simulation
-#          .\start.ps1 -Session mywork investFlorida.ai
-#          .\start.ps1 --reset investFlorida.ai
 
 param(
-    [switch]$Reset,
-    [string]$Session = "barcateam",
     [Parameter(Position=0, ValueFromRemainingArguments=$true)]
     [string[]]$Repos
 )
 
-# Support --reset (double-dash) in addition to -Reset (PowerShell native)
-if ($Repos -contains '--reset') {
-    $Reset = $true
-    $Repos = @($Repos | Where-Object { $_ -ne '--reset' })
-}
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
 
 if (-not $Repos -or $Repos.Count -eq 0) {
-    Write-Host "Usage: .\start.ps1 [--reset] [-Session <name>] <repo1> [repo2] ..."
+    Write-Host "Usage: .\start.ps1 <repo1> [repo2] ..."
     Write-Host "       repo can be a name (sibling dir or `$HOME\repos\<name>) or a full path"
     exit 1
 }
 
 $teamDir = $PSScriptRoot
 
-# ---------------------------------------------------------------------------
-# Prerequisites — auto-install if missing
-# ---------------------------------------------------------------------------
-
-if (-not (Get-Command psmux -ErrorAction SilentlyContinue)) {
-    Write-Host "psmux not found. Installing via winget..."
-    winget install psmux --accept-source-agreements --accept-package-agreements
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "ERROR: Failed to install psmux. Install manually: winget install psmux"
-        exit 1
-    }
-    $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" +
-                [System.Environment]::GetEnvironmentVariable("Path", "User")
-    if (-not (Get-Command psmux -ErrorAction SilentlyContinue)) {
-        Write-Host "ERROR: psmux installed but not on PATH. Restart your terminal and try again."
-        exit 1
-    }
+function Test-Cmd {
+    param([string]$Name)
+    return $null -ne (Get-Command $Name -ErrorAction SilentlyContinue)
 }
 
-if (-not (Get-Command claude -ErrorAction SilentlyContinue)) {
-    Write-Host "claude CLI not found. Installing via npm..."
-    if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
-        Write-Host "ERROR: npm not found. Install Node.js first: https://nodejs.org"
-        exit 1
-    }
-    npm install -g @anthropic-ai/claude-code
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "ERROR: Failed to install claude CLI."
-        exit 1
-    }
+if (-not (Test-Cmd copilot)) {
+    Write-Host "ERROR: copilot CLI not found on PATH." -ForegroundColor Red
+    Write-Host "       Run: .\scripts\install.ps1"
+    Write-Host "       Or:  npm install -g @github/copilot"
+    exit 1
 }
 
-# ---------------------------------------------------------------------------
-# Resolve repo arguments to absolute paths
-# ---------------------------------------------------------------------------
+function Resolve-RepoPath {
+    param([string]$Repo)
 
-$repoPaths = @()
-foreach ($repo in $Repos) {
-    if ([System.IO.Path]::IsPathRooted($repo)) {
-        $path = $repo
+    if ([System.IO.Path]::IsPathRooted($Repo)) {
+        $path = $Repo
     } else {
-        # Bare name — check sibling dir (../name) first, then $HOME\repos\<name>
-        $siblingPath = Join-Path (Split-Path $teamDir -Parent) $repo
+        $siblingPath = Join-Path (Split-Path $teamDir -Parent) $Repo
         if (Test-Path -Path $siblingPath -PathType Container) {
             $path = $siblingPath
         } else {
-            $path = Join-Path $HOME "repos\$repo"
+            $path = Join-Path $HOME "repos\$Repo"
         }
     }
 
     if (-not (Test-Path -Path $path -PathType Container)) {
-        Write-Host "ERROR: repo not found at '$path'"
+        Write-Host "ERROR: repo not found at '$path'" -ForegroundColor Red
         Write-Host "       Clone it first, e.g.: git clone <url> `"$path`""
         exit 1
     }
 
-    $repoPaths += (Resolve-Path $path).Path
+    return (Resolve-Path $path).Path
 }
 
-# ---------------------------------------------------------------------------
-# Build claude --add-dir flags
-# ---------------------------------------------------------------------------
-
-$addDirFlags = ($repoPaths | ForEach-Object { "--add-dir `"$_`"" }) -join ' '
-
-# ---------------------------------------------------------------------------
-# psmux session management
-# ---------------------------------------------------------------------------
-
-if ($Reset) {
-    psmux kill-session -t $Session 2>$null
-}
-
-$null = psmux has-session -t $Session 2>$null
-if ($LASTEXITCODE -eq 0) {
-    Write-Host "Session '$Session' already exists — attaching. Use --reset to restart."
-    psmux attach -t $Session
-    exit 0
+$repoPaths = @($Repos | ForEach-Object { Resolve-RepoPath $_ })
+$copilotArgs = @()
+foreach ($repoPath in $repoPaths) {
+    $copilotArgs += @("--add-dir", $repoPath)
 }
 
 Write-Host ""
-Write-Host " BarcaTeam — Starting agent orchestration hub (psmux)"
-Write-Host " Session : $Session"
-Write-Host " Repos   : $($repoPaths -join ', ')"
-if ($Reset) { Write-Host " Mode    : --reset (existing session killed)" }
+Write-Host " BarcaTeam — Starting GitHub Copilot CLI" -ForegroundColor Cyan
+Write-Host " Repos: $($repoPaths -join ', ')"
 Write-Host ""
 
-psmux new-session -d -s $Session -n lead
-
-# Apply managed config (Claude-specific settings, env-shim, focus-events, etc.)
-$managedConf = Join-Path $HOME ".config\psmux\capabilities.managed.conf"
-if (Test-Path $managedConf) {
-    $managedUnix = $managedConf -replace '\\','/'
-    psmux source-file "$managedUnix" 2>$null
+Push-Location $teamDir
+try {
+    & copilot @copilotArgs
+    exit $LASTEXITCODE
+} finally {
+    Pop-Location
 }
-
-# Apply user tmux.conf if present
-$tmuxConf = Join-Path $HOME ".tmux.conf"
-if (Test-Path $tmuxConf) {
-    $tmuxConfUnix = $tmuxConf -replace '\\','/'
-    psmux source-file "$tmuxConfUnix" 2>$null
-}
-
-# Ensure critical settings even if configs are missing
-psmux set-option -g mouse on
-psmux set-option -g history-limit 200000
-psmux set-option -g remain-on-exit on
-psmux set-option -g pane-border-status top
-psmux set-option -g pane-border-format " #{pane_index}: #{pane_title} "
-
-# Set tiled layout for better agent visibility
-psmux select-layout -t "${Session}:lead" tiled 2>$null
-
-$launchCmd = "cd `"$teamDir`" && claude $addDirFlags"
-# Double backslashes so psmux send-keys doesn't swallow them as escape chars
-$escapedCmd = $launchCmd -replace '\\', '\\'
-psmux send-keys -t "${Session}:lead" "$escapedCmd" Enter
-
-psmux attach -t $Session

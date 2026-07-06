@@ -1,14 +1,10 @@
 {
   "mcpServers": {
-    "claude-ping": {
-      "type": "stdio",
-      "command": "node",
-      "args": ["claude-ping/dist/mcp/server.js"]
-    },
     "memory": {
-      "type": "stdio",
+      "type": "local",
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-memory"]
+      "args": ["-y", "@modelcontextprotocol/server-memory"],
+      "tools": ["*"]
     }
   }
 }

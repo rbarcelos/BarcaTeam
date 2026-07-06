@@ -1,36 +1,29 @@
 # BarcaTeam -- Doctor Script (Windows / PowerShell)
 # Usage: .\scripts\doctor.ps1
-#
-# Audits current install state and reports what's configured, stale, or missing.
-# Each FAIL line includes a Fix: command you can copy-paste.
+# Each FAIL line includes a copy-paste fix.
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "SilentlyContinue"
 
 $REPO_ROOT = Split-Path -Parent $PSScriptRoot
+$EXPECTED_AGENTS = 32
+$EXPECTED_SKILLS = 21
 
-function Write-Pass  { param([string]$msg) Write-Host "  [OK]   $msg" -ForegroundColor Green  }
-function Write-Warn  { param([string]$msg) Write-Host "  [WARN] $msg" -ForegroundColor Yellow }
-function Write-Fail  { param([string]$msg) Write-Host "  [FAIL] $msg" -ForegroundColor Red    }
-function Write-Fix   { param([string]$msg) Write-Host "         Fix: $msg" -ForegroundColor DarkGray }
-function Write-Step  { param([string]$msg) Write-Host "`n== $msg ==" -ForegroundColor White   }
-function Test-Cmd    { param([string]$Name) return $null -ne (Get-Command $Name -ErrorAction SilentlyContinue) }
+function Write-Pass { param([string]$msg) Write-Host "  [OK]   $msg" -ForegroundColor Green }
+function Write-Warn { param([string]$msg) Write-Host "  [WARN] $msg" -ForegroundColor Yellow }
+function Write-Fail { param([string]$msg) Write-Host "  [FAIL] $msg" -ForegroundColor Red }
+function Write-Fix  { param([string]$msg) Write-Host "         Fix: $msg" -ForegroundColor DarkGray }
+function Write-Step { param([string]$msg) Write-Host "`n== $msg ==" -ForegroundColor White }
+function Test-Cmd   { param([string]$Name) return $null -ne (Get-Command $Name -ErrorAction SilentlyContinue) }
 
-$script:ok   = 0
+$script:ok = 0
 $script:warn = 0
 $script:fail = 0
 
 function Check {
-    param(
-        [string]$Label,
-        [bool]$Passed,
-        [string]$FailMsg = "",
-        [string]$FixCmd  = $null,
-        [bool]$IsWarn    = $false
-    )
+    param([string]$Label, [bool]$Passed, [string]$FailMsg = "", [string]$FixCmd = $null, [bool]$IsWarn = $false)
     if ($Passed) {
-        Write-Pass $Label
-        $script:ok++
+        Write-Pass $Label; $script:ok++
     } elseif ($IsWarn) {
         if ($FailMsg) { Write-Warn "$Label - $FailMsg" } else { Write-Warn $Label }
         if ($FixCmd) { Write-Fix $FixCmd }
@@ -47,208 +40,76 @@ Write-Host "  BarcaTeam Doctor" -ForegroundColor Cyan
 Write-Host "  Repo: $REPO_ROOT" -ForegroundColor DarkGray
 Write-Host ""
 
-# ---------------------------------------------------------------------------
-# 1. Core CLIs
-# ---------------------------------------------------------------------------
 Write-Step "Core CLIs"
-
-# Node.js
 if (Test-Cmd node) {
-    $nodeVer = (node --version 2>&1) -replace 'v',''
-    $nodeMajor = [int](($nodeVer -split '\.')[0])
-    Check -Label "Node.js $nodeVer" -Passed ($nodeMajor -ge 20) `
-          -FailMsg "version $nodeVer found but >= 20 required" `
-          -FixCmd  "https://nodejs.org -- download and install LTS"
+    Check -Label "Node.js $((node --version 2>&1) -replace '^v','')" -Passed $true
 } else {
-    Check -Label "Node.js" -Passed $false `
-          -FailMsg "not found" `
-          -FixCmd  "https://nodejs.org"
+    Check -Label "Node.js" -Passed $false -FailMsg "not found" -FixCmd "https://nodejs.org -- download and install LTS"
 }
 
-# Python (optional)
-if (Test-Cmd python) {
-    $pyVer = (python --version 2>&1) -replace 'Python ',''
-    $pyParts = $pyVer -split '\.'
-    $pyOk = [int]$pyParts[0] -ge 3 -and [int]$pyParts[1] -ge 11
-    Check -Label "Python $pyVer (optional)" -Passed $pyOk `
-          -FailMsg "version < 3.11, upgrade at https://python.org" `
-          -IsWarn  $true
+if (Test-Cmd npm) {
+    Check -Label "npm $(npm --version 2>$null | Select-Object -First 1)" -Passed $true
 } else {
-    Check -Label "Python (optional)" -Passed $false `
-          -FailMsg "not found, needed for dev-env.sh only" `
-          -IsWarn  $true
+    Check -Label "npm" -Passed $false -FailMsg "not found" -FixCmd "Install Node.js from https://nodejs.org"
 }
 
-# Claude CLI
-if (Test-Cmd claude) {
-    $claudeVer = (claude --version 2>&1 | Select-Object -First 1)
-    Check -Label "Claude CLI: $claudeVer" -Passed $true
+if (Test-Cmd copilot) {
+    $copilotVersion = (copilot --version 2>&1 | Select-Object -First 1)
+    Check -Label "copilot: $copilotVersion" -Passed $true
+    Write-Warn "copilot requires GitHub authentication; run 'copilot' and follow the sign-in prompt if requested."
+    $script:warn++
 } else {
-    Check -Label "Claude CLI" -Passed $false `
-          -FailMsg "not found" `
-          -FixCmd  "npm install -g @anthropic-ai/claude-code"
+    Check -Label "copilot" -Passed $false -FailMsg "not found" -FixCmd "npm install -g @github/copilot"
 }
 
-# GitHub CLI
-if (Test-Cmd gh) {
-    $ghStatus = gh auth status 2>&1
-    $ghOk = $LASTEXITCODE -eq 0
-    Check -Label "GitHub CLI (gh)" -Passed $ghOk `
-          -FailMsg "not authenticated" `
-          -FixCmd  "gh auth login"
-} else {
-    Check -Label "GitHub CLI (gh)" -Passed $false `
-          -FailMsg "not found" `
-          -FixCmd  "https://cli.github.com"
-}
+Write-Step "Repo assets"
+$instructions = Join-Path $REPO_ROOT ".github\copilot-instructions.md"
+Check -Label ".github/copilot-instructions.md" -Passed (Test-Path $instructions) -FailMsg "missing" -FixCmd "git restore .github/copilot-instructions.md"
 
-# ---------------------------------------------------------------------------
-# 2. psmux
-# ---------------------------------------------------------------------------
-Write-Step "psmux (terminal multiplexer)"
+$agentsDir = Join-Path $REPO_ROOT ".github\agents"
+$agentCount = if (Test-Path $agentsDir) { @(Get-ChildItem $agentsDir -Filter "*.agent.md" -File).Count } else { 0 }
+Check -Label "agents count: $agentCount" -Passed ($agentCount -eq $EXPECTED_AGENTS) -FailMsg "expected $EXPECTED_AGENTS" -FixCmd "git restore .github/agents"
 
-if (Test-Cmd psmux) {
-    $psmuxVer = (psmux -V 2>&1 | Select-Object -First 1)
-    Write-Pass "psmux: $psmuxVer"
-    $script:ok++
+$skillsDir = Join-Path $REPO_ROOT ".github\skills"
+$skillCount = if (Test-Path $skillsDir) { @(Get-ChildItem $skillsDir -Filter "SKILL.md" -File -Recurse).Count } else { 0 }
+Check -Label "skills count: $skillCount" -Passed ($skillCount -eq $EXPECTED_SKILLS) -FailMsg "expected $EXPECTED_SKILLS" -FixCmd "git restore .github/skills"
 
-    $managedFile = Join-Path $HOME ".config\psmux\capabilities.managed.conf"
-    Check -Label "psmux capabilities.managed.conf" -Passed (Test-Path $managedFile) `
-          -FailMsg "not found, capabilities not configured" `
-          -FixCmd  ".\upgrade-psmux.ps1"
-
-    if (Test-Path $managedFile) {
-        $managedContent = Get-Content $managedFile -Raw -ErrorAction SilentlyContinue
-        $hasClaudeCodeFix = $managedContent -match 'claude-code-fix-tty'
-        Check -Label "psmux: claude-code-fix-tty capability" -Passed $hasClaudeCodeFix `
-              -FailMsg "missing, Claude Code pane launch may fail" `
-              -FixCmd  ".\upgrade-psmux.ps1"
-    }
-} else {
-    Check -Label "psmux" -Passed $false `
-          -FailMsg "not found" `
-          -FixCmd  'winget install psmux --accept-source-agreements --accept-package-agreements'
-}
-
-# ---------------------------------------------------------------------------
-# 3. claude-ping (WhatsApp MCP)
-# ---------------------------------------------------------------------------
-Write-Step "claude-ping (WhatsApp MCP server)"
-
-$claudePingPkg  = Join-Path $REPO_ROOT "claude-ping\package.json"
-$claudePingDist = Join-Path $REPO_ROOT "claude-ping\dist\mcp\server.js"
-
-if (Test-Path $claudePingPkg) {
-    Check -Label "claude-ping: package.json present" -Passed $true
-    Check -Label "claude-ping: dist/mcp/server.js built" -Passed (Test-Path $claudePingDist) `
-          -FailMsg "not built" `
-          -FixCmd  "Push-Location claude-ping; npm install; npm run build; Pop-Location"
-} else {
-    Check -Label "claude-ping" -Passed $false `
-          -FailMsg "submodule not initialised" `
-          -FixCmd  "git submodule update --init"
-}
-
-# ---------------------------------------------------------------------------
-# 4. .mcp.json
-# ---------------------------------------------------------------------------
-Write-Step "MCP configuration (.mcp.json)"
-
+Write-Step "MCP configuration"
 $mcpJson = Join-Path $REPO_ROOT ".mcp.json"
 if (Test-Path $mcpJson) {
     try {
         $mcp = Get-Content $mcpJson -Raw | ConvertFrom-Json
-        Write-Pass ".mcp.json present and valid JSON"
-        $script:ok++
-        $servers = $mcp.mcpServers.PSObject.Properties.Name
-        foreach ($s in @("claude-ping","memory")) {
-            Check -Label ".mcp.json: $s server configured" -Passed ($s -in $servers) `
-                  -FailMsg "missing from .mcp.json" `
-                  -FixCmd  "Add the $s block to .mcp.json (see README.md for format)"
-        }
+        Check -Label ".mcp.json valid JSON" -Passed $true
+        $servers = @($mcp.mcpServers.PSObject.Properties.Name)
+        Check -Label ".mcp.json memory server" -Passed ("memory" -in $servers) -FailMsg "missing" -FixCmd "Add mcpServers.memory using npx -y @modelcontextprotocol/server-memory"
     } catch {
-        Check -Label ".mcp.json valid JSON" -Passed $false `
-              -FailMsg "invalid JSON - $_" `
-              -FixCmd  "Fix the JSON syntax in .mcp.json"
+        Check -Label ".mcp.json valid JSON" -Passed $false -FailMsg "invalid JSON - $_" -FixCmd "Fix the JSON syntax in .mcp.json"
     }
 } else {
-    Check -Label ".mcp.json" -Passed $false `
-          -FailMsg "not found" `
-          -FixCmd  ".\scripts\install.ps1"
+    Check -Label ".mcp.json" -Passed $false -FailMsg "not found" -FixCmd ".\scripts\install.ps1"
 }
 
-# ---------------------------------------------------------------------------
-# 5. Claude plugins
-# ---------------------------------------------------------------------------
-Write-Step "Claude plugins"
-
-$requiredPlugins = @(
-    @{ Name = "context7";             Package = "context7@claude-plugins-official"            }
-    @{ Name = "playwright";           Package = "playwright@claude-plugins-official"          }
-    @{ Name = "pr-review-toolkit";    Package = "pr-review-toolkit@claude-plugins-official"  }
-    @{ Name = "security-guidance";    Package = "security-guidance@claude-plugins-official"  }
-    @{ Name = "typescript-lsp";       Package = "typescript-lsp@claude-plugins-official"     }
-    @{ Name = "pyright-lsp";          Package = "pyright-lsp@claude-plugins-official"        }
-    @{ Name = "claude-md-management"; Package = "claude-md-management@claude-plugins-official" }
-    @{ Name = "claude-code-setup";    Package = "claude-code-setup@claude-plugins-official"  }
-)
-
-if (Test-Cmd claude) {
-    $installedPluginsRaw = claude plugin list 2>&1
-    foreach ($p in $requiredPlugins) {
-        $found = ($installedPluginsRaw | Select-String -Pattern ([regex]::Escape($p.Name)) -Quiet) -eq $true
-        Check -Label "plugin: $($p.Name)" -Passed $found `
-              -FailMsg "not installed" `
-              -FixCmd  "claude plugin install $($p.Package)"
-    }
+Write-Step "Recommended tools"
+if (Test-Cmd gitnexus) {
+    $gitnexusVersion = (gitnexus --version 2>&1 | Select-Object -First 1)
+    Check -Label "GitNexus: $gitnexusVersion" -Passed $true
 } else {
-    Write-Warn "  [SKIP] Claude CLI not found - cannot check plugins"
-    $script:warn++
+    Check -Label "GitNexus" -Passed $false -FailMsg "not found, recommended for cross-file safety checks" -FixCmd "Install GitNexus manually if you need impact analysis" -IsWarn $true
 }
 
-# ---------------------------------------------------------------------------
-# 6. Repo structure
-# ---------------------------------------------------------------------------
-Write-Step "Repo structure"
-
-$expectedFiles = @(
-    @{ Path = "CLAUDE.md";                         Label = "CLAUDE.md (shared agent instructions)" }
-    @{ Path = "start.ps1";                         Label = "start.ps1 (Windows launcher)" }
-    @{ Path = ".github\copilot-instructions.md";   Label = ".github/copilot-instructions.md" }
-    @{ Path = ".claude\agents";                    Label = ".claude/agents/ directory" }
-    @{ Path = ".claude\skills";                    Label = ".claude/skills/ directory" }
-    @{ Path = "scripts\install.ps1";               Label = "scripts/install.ps1" }
-    @{ Path = "scripts\doctor.ps1";                Label = "scripts/doctor.ps1" }
-)
-
-foreach ($f in $expectedFiles) {
-    $fullPath = Join-Path $REPO_ROOT $f.Path
-    Check -Label $f.Label -Passed (Test-Path $fullPath) `
-          -FailMsg "missing at $($f.Path)" `
-          -FixCmd  "git checkout origin/master -- $($f.Path)"
-}
-
-# ---------------------------------------------------------------------------
-# Summary
-# ---------------------------------------------------------------------------
 Write-Host ""
 Write-Host "=======================================" -ForegroundColor White
 Write-Host "  Doctor Summary" -ForegroundColor White
 if ($script:fail -gt 0) {
     Write-Host "  OK: $($script:ok)   Warn: $($script:warn)   Fail: $($script:fail)" -ForegroundColor Red
+    Write-Host "  Run .\scripts\install.ps1 to fix most issues automatically." -ForegroundColor Red
 } elseif ($script:warn -gt 0) {
     Write-Host "  OK: $($script:ok)   Warn: $($script:warn)   Fail: $($script:fail)" -ForegroundColor Yellow
+    Write-Host "  Minor warnings only -- BarcaTeam should work." -ForegroundColor Yellow
 } else {
     Write-Host "  OK: $($script:ok)   Warn: $($script:warn)   Fail: $($script:fail)" -ForegroundColor Green
+    Write-Host "  All checks passed -- BarcaTeam is healthy." -ForegroundColor Green
 }
 Write-Host "=======================================" -ForegroundColor White
 Write-Host ""
 
-if ($script:fail -gt 0) {
-    Write-Host "  Run .\scripts\install.ps1 to fix most issues automatically." -ForegroundColor Red
-} elseif ($script:warn -gt 0) {
-    Write-Host "  Minor warnings only -- BarcaTeam should work. See above for optional fixes." -ForegroundColor Yellow
-} else {
-    Write-Host "  All checks passed -- BarcaTeam is healthy." -ForegroundColor Green
-}
-Write-Host ""

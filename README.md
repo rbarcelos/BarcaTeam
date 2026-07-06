@@ -1,96 +1,87 @@
 # BarcaTeam — AI Agent Orchestration Hub
 
-BarcaTeam is an AI-powered software delivery team that lives in a single folder. You describe a problem, and BarcaTeam automatically picks the right agents, creates a plan, and delivers the implementation — across one or more repositories.
+BarcaTeam is a multi-agent software-delivery harness for **GitHub Copilot CLI**. You describe a problem; the `lead` agent discovers context, selects the right specialists, plans the work, drives implementation, validates the result, and delivers across one or more repositories.
 
-It works with **Claude Code** and **GitHub Copilot CLI** using the same agent definitions.
+The orchestration entry point is `.github/agents/lead.agent.md`. Users can start with `@lead`, or simply describe the problem in a BarcaTeam Copilot session and let the lead coordinate the flow: **Discover → Understand → Plan → Build → Validate → Deliver**.
 
 ## Get Started (one command)
 
+Install the harness:
+
 ```powershell
 # Windows (PowerShell)
-git clone <this-repo-url>
-cd barcaTeam
 .\scripts\install.ps1
 ```
 
 ```bash
 # Linux / macOS
-git clone <this-repo-url>
-cd barcaTeam
 ./scripts/install.sh
 ```
 
-The install script checks prerequisites, configures psmux/tmux, builds the WhatsApp MCP server, and installs all required Claude plugins. It is **idempotent** — safe to re-run at any time.
+The installer verifies Node, GitHub CLI access, Copilot CLI, repo agents, skills, and MCP configuration. Copilot CLI is installed from npm package `@github/copilot`; the binary is `copilot`.
 
-Once installed, launch against your repo(s):
-
-```powershell
-.\start.ps1 C:\path\to\your\repo
-```
-
-Then just describe what you want and BarcaTeam does the rest.
-
-### Health check
+Launch BarcaTeam against one or more target repos:
 
 ```powershell
-.\scripts\doctor.ps1   # Windows
-./scripts/doctor.sh    # Linux / macOS
+# Windows
+.\start.ps1 C:\path\to\repo1 C:\path\to\repo2
 ```
 
-Reports every component (green = OK, yellow = warning, red = broken) with a copy-paste fix command for each failure.
-
-## Troubleshooting
-
-### Windows: `claude` not found after install
-Node.js was likely installed after the current PowerShell session started. Restart PowerShell and re-run `install.ps1`.
-
-### psmux agent panes launch but agents never start
-psmux strips backslashes from Windows paths when generating pane commands. After `TeamCreate` completes, manually re-launch each pane with `tmux send-keys`. See the **Psmux Agent Launch Bug** section in `CLAUDE.md` for the exact commands.
-
-### claude-ping / WhatsApp QR code prompt
-On first run, claude-ping will prompt you to scan a WhatsApp QR code. Open a Claude session with BarcaTeam and the prompt will appear automatically. Subsequent sessions auto-authenticate from the saved session.
-
-### GitNexus install errors
-BarcaTeam no longer depends on GitNexus directly. If an older install guide referenced it, ignore that step — `install.ps1` covers all required setup.
-
-### Plugin install is interactive
-`claude plugin install` may prompt for confirmation. If running in CI or a non-interactive shell, install plugins manually:
+```bash
+# Linux / macOS
+./start.sh /path/to/repo1 /path/to/repo2
 ```
-claude plugin install context7@claude-plugins-official
-claude plugin install playwright@claude-plugins-official
-claude plugin install pr-review-toolkit@claude-plugins-official
-claude plugin install security-guidance@claude-plugins-official
-claude plugin install typescript-lsp@claude-plugins-official
-claude plugin install pyright-lsp@claude-plugins-official
-claude plugin install claude-md-management@claude-plugins-official
-claude plugin install claude-code-setup@claude-plugins-official
+
+The launchers run `copilot --add-dir <repo> ...`, so the lead agent can inspect and coordinate work across every repo you pass in.
+
+## Health check
+
+```powershell
+.\scripts\doctor.ps1
 ```
+
+```bash
+./scripts/doctor.sh
+```
+
+The doctor script reports installed components, missing prerequisites, stale configuration, and copy-paste fixes. Use it after setup, after upgrading Copilot CLI, or whenever agents or skills do not appear as expected.
 
 ## Usage
 
-```bash
-# Claude Code (full agent team orchestration)
-.\start.ps1 C:\path\to\repo1 C:\path\to\repo2
+Start BarcaTeam, then describe the outcome you want:
 
-# Copilot CLI (agents via @mention)
-start-copilot.cmd C:\path\to\repo1 C:\path\to\repo2
-
-# Then just describe what you want:
-> "Add a search bar to the dashboard that queries the listings API"
+```text
+@lead Add a search bar to the dashboard that queries the listings API.
 ```
 
-BarcaTeam will:
+You can also use Copilot CLI directly:
 
-1. **Discover context** — reads each repo's README, docs/, project instructions
-2. **Understand needs** — spawns domain agents + PM in parallel to analyze the problem from multiple perspectives
-3. **Plan** — synthesizes findings, selects the right agents, writes `team_plan.md`, waits for your approval
-4. **Design & Build** — architect designs, engineer implements (with lead approval gate before coding)
-5. **Validate** — the same agents who identified needs now verify the solution meets them
-6. **Deliver** — aggregates results, presents deliverables, asks for feedback
+```powershell
+copilot --add-dir C:\path\to\repo -p "@lead Investigate why the mobile login page crashes" --allow-all
+```
+
+Useful Copilot commands in this harness:
+
+| Command | Use |
+|---|---|
+| `/fleet` | Run multiple subagents in parallel. |
+| `/subagents` | Inspect and manage available subagents. |
+| `/tasks` | Track delegated work. |
+| `/skills` | See loaded project skills. |
+| `/mcp` | Inspect MCP servers. |
+| `/plugin` | Manage Copilot plugins. |
+| `/memory` | Store and retrieve durable context. |
+| `/review` | Run a code review pass. |
+| `/security-review` | Run a security-focused review. |
+| `/rubber-duck` | Talk through a problem. |
+| `/lsp` | Use language-server support. |
+| `/delegate` | Delegate cloud PR work. |
+
+Custom agents are invoked by `@mention`, for example `@pm`, `@architect`, `@senior-engineer`, or `@qa`.
 
 ## How It Works
 
-```
+```text
   You: "Add search to the dashboard"
          │
          ▼
@@ -109,14 +100,13 @@ BarcaTeam will:
                  ▼
   ┌─────────────────────────────────────┐
   │  3. PLAN — Lead merges findings,    │
-  │  selects team, writes team_plan.md  │
-  │  → waits for user approval          │
+  │  selects team, proposes approach    │
   └──────────────┬──────────────────────┘
                  ▼
   ┌─────────────────────────────────────┐
   │  4. DESIGN & BUILD (sequential)     │
   │  Architect ──→ Engineer             │
-  │  (lead approval gate before build)  │
+  │  gated by scope and design checks   │
   └──────────────┬──────────────────────┘
                  ▼
   ┌─────────────────────────────────────┐
@@ -130,203 +120,160 @@ BarcaTeam will:
                  ▼
   ┌─────────────────────────────────────┐
   │  6. DELIVER — Lead aggregates       │
-  │  results, presents to user          │
+  │  results, evidence, and follow-ups  │
   └─────────────────────────────────────┘
 ```
 
-### The Key Insights
+## Key Insights
 
-1. **Understand before planning.** Domain agents and PM analyze the problem in parallel *before* any plan is created. The lead synthesizes their findings into a unified Needs Summary.
-
-2. **Domain-first, PM as fallback.** If domain agents exist for the project's domain, they lead discovery. PM is always included as the generalist perspective, and serves as the primary analyst when no domain experts apply.
-
-3. **Same agents validate as discover.** The agents who identified the needs re-evaluate the solution against those same needs. This closes the loop and catches drift.
-
-4. **Agents are generic.** They don't know your stack until launch. Context comes from the target repos' own files (`README.md`, `docs/`, project instructions).
+1. **Understand before planning.** Domain agents and PM analyze the problem in parallel before the lead creates a plan.
+2. **Domain-first, PM as fallback.** If domain specialists fit the repo, they lead discovery. PM is always included as the generalist perspective.
+3. **Same agents validate as discover.** The agents that identified needs re-check the final result against those needs.
+4. **Agents are generic until launch.** They learn the target stack from the repos you pass with `--add-dir`: README files, docs, project instructions, tests, and code.
+5. **Cross-file safety matters.** GitNexus is optional, but recommended as a standalone impact-analysis CLI before edits to shared types, helpers, prompts, extraction contracts, or status fields.
 
 ## Architecture
 
-```
-agents/lead.agent.md             ← Orchestrator agent (platform-agnostic)
-CLAUDE.md                        ← Claude-specific: "delegate to @lead"
-.github/copilot-instructions.md  ← Copilot-specific: "delegate to @lead"
+BarcaTeam is intentionally thin. Copilot CLI supplies the agent runtime; this repo supplies the operating manual, agent catalog, skills, launch scripts, and MCP configuration.
+
+```text
+barcaTeam/
+├── .github/
+│   ├── copilot-instructions.md      # canonical operating manual
+│   ├── agents/*.agent.md            # 32 Copilot custom agents
+│   └── skills/*/SKILL.md            # 21 Copilot skills
+├── AGENTS.md                        # concise agent catalog
+├── .mcp.json                        # project MCP config; memory server only
+├── scripts/
+│   ├── install.ps1 / install.sh     # install and configure the harness
+│   └── doctor.ps1 / doctor.sh       # health checks and repair hints
+├── start.ps1 / start.sh             # launch Copilot with --add-dir repos
+├── docs/                            # migration notes and supporting docs
+└── README.md
 ```
 
-The orchestration logic lives in the **`lead` agent** — a platform-agnostic agent definition that knows how to discover context, classify requests, select agents, plan, execute, and deliver. Each platform's instruction file (`CLAUDE.md`, `.github/copilot-instructions.md`) is a thin wrapper that says "delegate to the lead agent" plus platform-specific controls.
+Copilot auto-discovers repo agents from `.github/agents/*.agent.md`, project skills from `.github/skills/*/SKILL.md`, and MCP servers from `.mcp.json`. There is no sync step.
 
 ## Agents
 
-### Core Team (any project)
+BarcaTeam currently includes **32 agents**.
+
+### Core Team
 
 | Agent | Role | Writes Code? | When Used |
-|---|---|---|---|
-| `lead` | **Orchestrator** — discovers context, selects agents, plans, coordinates | No | Always — entry point for all requests |
-| `pm` | Scope, acceptance criteria, PM Brief | No | New capabilities, requirements analysis |
-| `architect` | Design, contracts, tech decisions, code review | No | New capabilities, refactoring, design reviews |
-| `senior-engineer` | Execution plan, GitHub issues, implementation | **Yes** | Any task that changes code |
-| `qa` | Validation, production readiness, test evidence | No | After implementation, before merge |
-| `conversational-ux-engineer` | Chat/agentic UX design | No | Conversational UI, chat flows, agent interactions |
-| `mcp-infrastructure-engineer` | MCP API and tool ecosystem design | No | API design, tool integration, MCP servers |
+|---|---|---:|---|
+| `lead` | Orchestrator: discovers context, selects agents, plans, coordinates, delivers | No | Always; entry point for non-trivial requests |
+| `pm` | Scope, acceptance criteria, PM briefs, issue framing | No | New capabilities, requirements, triage |
+| `architect` | Solution design, contracts, technical decisions, sign-off | No | New capabilities, refactors, design reviews |
+| `senior-engineer` | Execution plan, GitHub issues, implementation | Yes | Any task that changes code |
+| `qa` | Acceptance validation, production readiness, test evidence | No | After implementation, before merge |
+| `pr-merger` | Pre-merge gate using review and typecheck evidence | No | Before merging larger PRs |
+| `docs-resolver` | Current library and SDK documentation | No | Before coding against fast-moving libraries |
+| `mcp-infrastructure-engineer` | MCP API and tool ecosystem design | No | MCP servers, tool schemas, agent-facing APIs |
 
-### Domain Agents (real estate)
-
-Located in `agents/realstate/`. These are domain experts and stakeholder personas:
+### Real Estate Domain Agents
 
 | Agent | Role |
 |---|---|
-| `str-revenue-strategist` | STR revenue modeling and underwriting |
-| `persona-power-user` | Evaluates from AI-savvy investor perspective |
-| `persona-international-investor` | Foreign investor perspective |
-| `persona-mortgage-manager` | Lending/financing perspective |
-| `persona-buyer-agent` | Real estate agent perspective |
-| `persona-regulatory-compliance` | Regulatory/legal perspective |
-| `persona-str-operator` | Property operations perspective |
+| `str-revenue-strategist` | STR revenue modeling, comp analysis, and investment underwriting |
+| `persona-power-user` | AI-savvy investor evaluator for depth and explainability |
+| `persona-international-investor` | International investor perspective |
+| `persona-mortgage-manager` | Lending and financing perspective |
+| `persona-buyer-agent` | Real estate buyer-agent perspective |
+| `persona-regulatory-compliance` | STR regulatory, zoning, HOA, and tax perspective |
+| `persona-str-operator` | Property operations and occupancy realism perspective |
 
-### Adding Your Own Agents
+### Quality, Strategy, and UX Agents
 
-Create a file in `agents/` with the `.agent.md` extension:
+Examples include `ceo`, `investor`, `marketing-brand-strategist`, `copy-editor`, `security-reviewer`, `accessibility-reviewer`, `data-quality-auditor`, `competitor-analyst`, `information-architect`, `design-system-architect`, `ux-engineer`, `ux-critic`, `usability-reviewer`, `live-visual-qa`, `ux-qa-tester`, and `prompt-engineer`.
 
-```yaml
----
-name: my-agent
-description: "What this agent does"
-model: sonnet
-tools:
-  - Read
-  - Grep
-  - Glob
-disallowedTools:
-  - Write
-  - Edit
----
+## Skills
 
-# My Agent
+BarcaTeam currently includes **21 skills** in `.github/skills/`. Copilot auto-loads relevant skills from their descriptions.
 
-Instructions for the agent...
-```
+| Skill | Use |
+|---|---|
+| `context-discovery` | Standard repo, docs, and history discovery before capability work. |
+| `document-templates` | Templates for PM briefs, architecture notes, execution plans, and QA reports. |
+| `git-workflow` | Branch, worktree, commit, PR, and cleanup conventions. |
+| `code-review-checklist` | Structured self-review and architecture sign-off checklist. |
+| `engineer-workflow` | End-to-end implementation workflow for coding agents. |
+| `issue-triage` | Triage open issues and produce labels, comments, closures, and summary. |
+| `improvement-loop` | Autonomous product improvement cycle from signal to fix to validation. |
+| `issue-templates` | Standard issue formats for tasks, bugs, and follow-ups. |
+| `team-handoff` | Handoff format between PM, architect, engineer, QA, and specialists. |
+| `automated-ux-audit` | Accessibility, visual, and interactive-element audit workflow. |
 
-The `.agent.md` format works with both Claude Code and Copilot CLI. Claude uses the full YAML frontmatter (model, tools, skills, memory). Copilot uses `name` and `description` and ignores the rest.
+Other available skills include `accessibility-audit`, `ask-user-question`, `capability-init`, `competitor-benchmark`, `data-pipeline-audit`, `e2e-live-qa`, `finding-schema`, `mock-to-production`, `security-audit`, `solution-review`, and `ux-proposals`.
 
 ## Request Types
 
 BarcaTeam classifies your request and picks agents accordingly:
 
-| You Say | Classification | Agents Used |
+| You Say | Classification | Typical Agents |
 |---|---|---|
-| "Build a search feature" | New Capability | PM → Architect → Engineer → QA |
-| "The login page crashes on mobile" | Bug Fix | Engineer → QA |
-| "Refactor the API to use REST" | Refactor | Architect → Engineer → QA |
-| "How does auth work in this repo?" | Research | PM (or just answers directly) |
-| "Review the database schema design" | Design Review | Architect |
-| "Evaluate the UX of the chat flow" | Domain Evaluation | conversational-ux-engineer |
-| "Get feedback from stakeholder personas" | Domain Evaluation | persona agents (in parallel) |
+| "Build a search feature" | New capability | `pm` → `architect` → `senior-engineer` → `qa` |
+| "The login page crashes on mobile" | Bug fix | `senior-engineer` → `qa` |
+| "Refactor the API to use REST" | Refactor | `architect` → `senior-engineer` → `qa` |
+| "How does auth work in this repo?" | Research | `lead`, `pm`, or a relevant specialist |
+| "Review the database schema design" | Design review | `architect`, `data-quality-auditor` |
+| "Evaluate the UX of the chat flow" | UX evaluation | `conversational-ux-engineer`, `ux-critic`, `ux-qa-tester` |
+| "Get feedback from stakeholder personas" | Domain evaluation | Persona agents in parallel |
+| "Audit for security risks" | Security review | `security-reviewer` plus `/security-review` |
 
-## Setup
+## Adding Your Own Agents
 
-### Prerequisites
+Create a file named `.github/agents/<name>.agent.md`:
 
-- **Claude Code**: [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed
-- **Copilot CLI**: [GitHub Copilot in the CLI](https://docs.github.com/en/copilot/github-copilot-in-the-cli) installed
-- **Windows**: WSL with Ubuntu + tmux (for Claude's split-pane mode)
-- Developer Mode enabled (for symlinks)
+```markdown
+---
+name: my-agent
+description: "What this agent does and when Copilot should use it."
+---
 
-### First-Time Setup
+# My Agent
 
-```bash
-# Clone this repo
-git clone <this-repo-url>
-cd BarcaTeam
+You are responsible for ...
 
-# For Copilot: sync agents to user directory
-sync-agents.cmd
+When invoked:
+1. Discover relevant context.
+2. Produce a clear plan.
+3. Execute or review within your role.
+4. Return concise evidence and follow-ups.
 ```
 
-### Launch
-
-```bash
-# Option A: Claude Code (full agent team orchestration, tmux split-panes)
-start-claude.cmd C:\path\to\repo1 C:\path\to\repo2
-
-# Option B: Copilot CLI (agents via @mention, sequential coordination)
-start-copilot.cmd C:\path\to\repo1 C:\path\to\repo2
-```
-
-## Platform Comparison
-
-| Feature | Claude Code | Copilot CLI |
-|---|---|---|
-| Agent definitions | ✅ Shared `.agent.md` | ✅ Shared `.agent.md` |
-| Orchestrator workflow | ✅ `ORCHESTRATOR.md` | ✅ `ORCHESTRATOR.md` |
-| Agent Teams (auto-coordination) | ✅ Native | ❌ Manual via @mentions |
-| Task dependencies | ✅ Built-in | ❌ Lead coordinates order |
-| tmux split-panes | ✅ Yes | ❌ No |
-| Skills | ✅ `.claude/skills/` | ❌ Not supported |
-| Agent memory | ✅ Persists across sessions | ❌ Not supported |
-
-## Project Structure
-
-```
-BarcaTeam/
-├── CLAUDE.md                    # Claude-specific: delegates to lead agent
-├── README.md                    # This file
-├── start-claude.cmd             # Launch Claude in tmux with Agent Teams
-├── start-copilot.cmd            # Launch Copilot CLI with synced agents
-├── sync-agents.cmd              # Sync agents to Copilot user dir
-├── tmux-cheatsheet.md           # tmux keyboard reference
-├── .github/
-│   └── copilot-instructions.md  # Copilot-specific: delegates to lead agent
-├── agents/                      # Agent definitions (shared format)
-│   ├── lead.agent.md            # Orchestrator — entry point
-│   ├── pm.agent.md
-│   ├── architect.agent.md
-│   ├── senior-engineer.agent.md
-│   ├── qa.agent.md
-│   ├── conversational-ux-engineer.agent.md
-│   ├── mcp-infrastructure-engineer.agent.md
-│   └── realstate/               # Domain-specific agents
-│       ├── str-revenue-strategist.agent.md
-│       └── persona-*.agent.md   # Stakeholder personas
-└── .claude/
-    ├── agents -> ../agents/     # Symlink for Claude agent discovery
-    └── skills/                  # Skills (Claude-specific)
-        ├── context-discovery.md
-        ├── document-templates.md
-        ├── git-workflow.md
-        ├── code-review-checklist.md
-        ├── issue-templates.md
-        └── team-handoff.md
-```
-
-## Skills (Claude-specific)
-
-Skills are reusable instruction sets that agents reference. They eliminate duplication and ensure consistency:
-
-| Skill | Used By | Purpose |
-|---|---|---|
-| `context-discovery` | All agents | Standardized repo discovery procedure |
-| `document-templates` | PM, Architect, Engineer, QA | Canonical output templates |
-| `git-workflow` | Engineer | Worktrees, commits, PRs, branching |
-| `code-review-checklist` | Architect, Engineer | 8-category review checklist with severity |
-| `issue-templates` | Engineer, QA | GitHub issue formats for tasks and bugs |
-| `team-handoff` | All agents | What to include when passing work to next agent |
+Copilot reads `name` and `description` from the frontmatter and uses the body as the agent's instructions. Agents inherit the session's available tools and project context; keep permissions and workflow rules in the instructions rather than adding unsupported frontmatter fields.
 
 ## Adding Domain Agent Packs
 
-Create a subdirectory under `agents/` for each domain:
+Domain packs let BarcaTeam adapt to a specific industry without changing the core workflow.
 
-```
-agents/
-├── fintech/
-│   ├── risk-analyst.agent.md
-│   └── persona-trader.agent.md
-├── healthcare/
-│   ├── hipaa-reviewer.agent.md
-│   └── persona-clinician.agent.md
-└── realstate/
-    └── ... (existing)
+1. Add one or more agents in `.github/agents/` with focused domain roles.
+2. Give each agent a clear `description` that explains when it should be used.
+3. Add matching skills in `.github/skills/<skill-name>/SKILL.md` only when the domain needs reusable procedures.
+4. Update `AGENTS.md` and this README if the pack should be visible to future users.
+5. Run `./scripts/doctor.sh` or `.\scripts\doctor.ps1` to verify discovery.
+
+A good domain pack includes both expert reviewers and stakeholder personas. The lead can then use `/fleet` to gather parallel signals before planning or validating work.
+
+## MCP and Memory
+
+Project MCP configuration lives in `.mcp.json`. BarcaTeam currently configures only the `memory` MCP server:
+
+```json
+{
+  "mcpServers": {
+    "memory": {
+      "type": "local",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"],
+      "tools": ["*"]
+    }
+  }
+}
 ```
 
-BarcaTeam Lead will discover and use domain agents when they're relevant to the repos being worked on.
+Use Copilot's `/mcp` command to inspect server status and `/memory` for durable context.
 
 ## License
 
