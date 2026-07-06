@@ -1,313 +1,143 @@
 # BarcaTeam -- One-Command Install Script (Windows / PowerShell)
 # Usage: .\scripts\install.ps1
-#
 # Idempotent -- safe to re-run at any time.
-# Re-running skips already-configured components and reports green.
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $REPO_ROOT = Split-Path -Parent $PSScriptRoot
+$EXPECTED_AGENTS = 32
+$EXPECTED_SKILLS = 21
 
-# ---------------------------------------------------------------------------
-# Colour helpers
-# ---------------------------------------------------------------------------
 function Write-Pass  { param([string]$msg) Write-Host "  [PASS] $msg" -ForegroundColor Green  }
 function Write-Skip  { param([string]$msg) Write-Host "  [SKIP] $msg" -ForegroundColor Yellow }
 function Write-Fail  { param([string]$msg) Write-Host "  [FAIL] $msg" -ForegroundColor Red    }
 function Write-Info  { param([string]$msg) Write-Host "  [INFO] $msg" -ForegroundColor Cyan   }
 function Write-Step  { param([string]$msg) Write-Host "`n== $msg ==" -ForegroundColor White   }
-function Write-Banner {
-    Write-Host ""
-    Write-Host "  BarcaTeam -- One-Command Install" -ForegroundColor Cyan
-    Write-Host ""
-}
+function Test-Cmd    { param([string]$Name) return $null -ne (Get-Command $Name -ErrorAction SilentlyContinue) }
 
-$script:pass  = 0
-$script:skip  = 0
-$script:fail  = 0
+$script:pass = 0
+$script:skip = 0
+$script:fail = 0
 
-function Test-Cmd { param([string]$Name) return $null -ne (Get-Command $Name -ErrorAction SilentlyContinue) }
+function Pass { param([string]$msg) Write-Pass $msg; $script:pass++ }
+function Skip { param([string]$msg) Write-Skip $msg; $script:skip++ }
+function Fail { param([string]$msg) Write-Fail $msg; $script:fail++ }
 
-function Invoke-Step {
-    param(
-        [string]$Label,
-        [scriptblock]$Check,
-        [scriptblock]$Action
-    )
-    if (& $Check) {
-        Write-Skip $Label
-        $script:skip++
-    } else {
-        try {
-            & $Action
-            Write-Pass $Label
-            $script:pass++
-        } catch {
-            Write-Fail "$Label - $_"
-            $script:fail++
-        }
-    }
-}
+Write-Host ""
+Write-Host "  BarcaTeam -- One-Command Install" -ForegroundColor Cyan
+Write-Host ""
 
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
-Write-Banner
-
-# ---------------------------------------------------------------------------
-# Step 1: Pre-flight checks
-# ---------------------------------------------------------------------------
 Write-Step "Pre-flight checks"
+$preflightOk = $true
 
-$preflight_ok = $true
-
-# Node >= 20
 if (Test-Cmd node) {
-    $nodeVer = (node --version 2>&1) -replace 'v',''
-    $nodeMajor = [int]($nodeVer -split '\.')[0]
-    if ($nodeMajor -ge 20) {
-        Write-Pass "Node.js $nodeVer (>= 20)"
-        $script:pass++
-    } else {
-        Write-Fail "Node.js $nodeVer found but >= 20 required. Upgrade: https://nodejs.org"
-        $script:fail++; $preflight_ok = $false
-    }
+    $nodeVer = (node --version 2>&1) -replace '^v',''
+    Pass "Node.js $nodeVer"
 } else {
-    Write-Fail "Node.js not found. Install from: https://nodejs.org"
-    $script:fail++; $preflight_ok = $false
+    Fail "Node.js not found. Install from: https://nodejs.org"
+    $preflightOk = $false
 }
 
-# Python >= 3.11 (optional)
-if (Test-Cmd python) {
-    $pyVer = (python --version 2>&1) -replace 'Python ',''
-    $pyParts = $pyVer -split '\.'
-    if ([int]$pyParts[0] -ge 3 -and [int]$pyParts[1] -ge 11) {
-        Write-Pass "Python $pyVer (>= 3.11)"
-        $script:pass++
-    } else {
-        Write-Skip "Python $pyVer (< 3.11, optional - upgrade at https://python.org if needed)"
-        $script:skip++
-    }
+if (Test-Cmd npm) {
+    $npmVer = (npm --version 2>$null | Select-Object -First 1)
+    Pass "npm $npmVer"
 } else {
-    Write-Skip "Python not found (optional - needed only for dev-env.sh)"
-    $script:skip++
+    Fail "npm not found. Install Node.js from: https://nodejs.org"
+    $preflightOk = $false
 }
 
-# gh CLI authenticated
-if (Test-Cmd gh) {
-    $ghStatus = gh auth status 2>&1
-    if ($LASTEXITCODE -eq 0) {
-        Write-Pass "GitHub CLI authenticated"
-        $script:pass++
-    } else {
-        Write-Fail "GitHub CLI found but not authenticated. Run: gh auth login"
-        $script:fail++
-    }
-} else {
-    Write-Fail "GitHub CLI not found. Install: https://cli.github.com"
-    $script:fail++; $preflight_ok = $false
-}
-
-# Claude CLI
-if (Test-Cmd claude) {
-    $claudeVer = (claude --version 2>&1 | Select-Object -First 1)
-    Write-Pass "Claude CLI: $claudeVer"
-    $script:pass++
-} else {
-    Write-Info "Claude CLI not found - installing via npm..."
-    try {
-        npm install -g @anthropic-ai/claude-code
-        Write-Pass "Claude CLI installed"
-        $script:pass++
-    } catch {
-        Write-Fail "Failed to install Claude CLI: $_"
-        $script:fail++; $preflight_ok = $false
-    }
-}
-
-if (-not $preflight_ok) {
+if (-not $preflightOk) {
     Write-Host ""
     Write-Host "  Pre-flight failed. Fix the issues above, then re-run this script." -ForegroundColor Red
     exit 1
 }
 
-# ---------------------------------------------------------------------------
-# Step 2: psmux (Windows terminal multiplexer, tmux-compatible)
-# ---------------------------------------------------------------------------
-Write-Step "psmux (terminal multiplexer)"
-
-Invoke-Step -Label "psmux installed" `
-    -Check  { Test-Cmd psmux } `
-    -Action {
-        Write-Info "Installing psmux via winget..."
-        winget install psmux --accept-source-agreements --accept-package-agreements --silent
-        # Refresh PATH
-        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" +
-                    [System.Environment]::GetEnvironmentVariable("Path","User")
-        if (-not (Test-Cmd psmux)) {
-            throw "psmux installed but not on PATH. Restart your terminal and re-run."
-        }
-    }
-
-# Run upgrade-psmux.ps1 to configure psmux capabilities (idempotent)
-$upgradePsmux = Join-Path $REPO_ROOT "upgrade-psmux.ps1"
-if (Test-Path $upgradePsmux) {
-    Invoke-Step -Label "psmux capabilities configured" `
-        -Check  {
-            $managedFile = Join-Path $HOME ".config\psmux\capabilities.managed.conf"
-            Test-Path $managedFile
-        } `
-        -Action {
-            Write-Info "Running upgrade-psmux.ps1 to apply capabilities..."
-            & $upgradePsmux
-        }
+Write-Step "GitHub Copilot CLI"
+if (Test-Cmd copilot) {
+    $currentVersion = (copilot --version 2>&1 | Select-Object -First 1)
+    Skip "copilot already installed: $currentVersion"
 } else {
-    Write-Skip "upgrade-psmux.ps1 not found - skip psmux capability config"
-    $script:skip++
+    Write-Info "Installing @github/copilot globally..."
+    npm install -g @github/copilot
+    if ($LASTEXITCODE -ne 0) { Fail "npm install -g @github/copilot failed"; exit 1 }
+    Pass "@github/copilot installed"
 }
 
-# ---------------------------------------------------------------------------
-# Step 3: claude-ping MCP server (WhatsApp integration)
-# ---------------------------------------------------------------------------
-Write-Step "claude-ping (WhatsApp MCP server)"
-
-$claudePingDir  = Join-Path $REPO_ROOT "claude-ping"
-$claudePingDist = Join-Path $claudePingDir "dist\mcp\server.js"
-
-Invoke-Step -Label "claude-ping submodule present" `
-    -Check  { Test-Path (Join-Path $claudePingDir "package.json") } `
-    -Action {
-        throw "claude-ping submodule not found at $claudePingDir. Run: git submodule update --init"
-    }
-
-# Only attempt build if package.json exists
-if (Test-Path (Join-Path $claudePingDir "package.json")) {
-    Invoke-Step -Label "claude-ping built (dist/mcp/server.js)" `
-        -Check  { Test-Path $claudePingDist } `
-        -Action {
-            Write-Info "Installing claude-ping npm deps and building..."
-            Push-Location $claudePingDir
-            try {
-                npm install
-                if ($LASTEXITCODE -ne 0) { throw "npm install failed (exit $LASTEXITCODE)" }
-                $pkgPath = Join-Path $claudePingDir "package.json"
-                $pkg = Get-Content $pkgPath -Raw | ConvertFrom-Json
-                if ($pkg.scripts.build) {
-                    npm run build
-                    if ($LASTEXITCODE -ne 0) { throw "npm run build failed (exit $LASTEXITCODE)" }
-                }
-            } finally {
-                Pop-Location
-            }
-        }
+if (Test-Cmd copilot) {
+    $version = (copilot --version 2>&1 | Select-Object -First 1)
+    Pass "copilot --version: $version"
 } else {
-    Write-Skip "claude-ping build (submodule not present - skipping)"
-    $script:skip++
+    Fail "copilot still not found after install. Restart your terminal and re-run."
 }
 
-# ---------------------------------------------------------------------------
-# Step 4: Verify .mcp.json is in place
-# ---------------------------------------------------------------------------
-Write-Step "MCP server configuration (.mcp.json)"
+Write-Step "Repo assets"
+$agentsDir = Join-Path $REPO_ROOT ".github\agents"
+$skillsDir = Join-Path $REPO_ROOT ".github\skills"
+$instructions = Join-Path $REPO_ROOT ".github\copilot-instructions.md"
 
+$agentCount = if (Test-Path $agentsDir) { @(Get-ChildItem $agentsDir -Filter "*.agent.md" -File).Count } else { 0 }
+if ($agentCount -eq $EXPECTED_AGENTS) { Pass "agents: $agentCount" } else { Fail "agents: expected $EXPECTED_AGENTS, found $agentCount" }
+
+$skillCount = if (Test-Path $skillsDir) { @(Get-ChildItem $skillsDir -Filter "SKILL.md" -File -Recurse).Count } else { 0 }
+if ($skillCount -eq $EXPECTED_SKILLS) { Pass "skills: $skillCount" } else { Fail "skills: expected $EXPECTED_SKILLS, found $skillCount" }
+
+if (Test-Path $instructions) { Pass ".github\copilot-instructions.md present" } else { Fail ".github\copilot-instructions.md missing" }
+
+Write-Step "MCP configuration"
 $mcpJson = Join-Path $REPO_ROOT ".mcp.json"
-
-Invoke-Step -Label ".mcp.json present" `
-    -Check  { Test-Path $mcpJson } `
-    -Action {
-        $minimal = @{
-            mcpServers = @{
-                "claude-ping" = @{
-                    type    = "stdio"
-                    command = "node"
-                    args    = @("claude-ping/dist/mcp/server.js")
-                }
-                "memory" = @{
-                    type    = "stdio"
-                    command = "npx"
-                    args    = @("-y", "@modelcontextprotocol/server-memory")
-                }
-            }
-        }
-        $minimal | ConvertTo-Json -Depth 5 | Set-Content $mcpJson -Encoding UTF8
+if (Test-Path $mcpJson) {
+    try {
+        $mcp = Get-Content $mcpJson -Raw | ConvertFrom-Json
+        Pass ".mcp.json valid JSON"
+        $servers = @($mcp.mcpServers.PSObject.Properties.Name)
+        if ("memory" -in $servers) { Pass ".mcp.json contains memory server" } else { Fail ".mcp.json missing memory server" }
+    } catch {
+        Fail ".mcp.json invalid JSON: $_"
     }
-
-# ---------------------------------------------------------------------------
-# Step 5: Claude plugins
-# ---------------------------------------------------------------------------
-Write-Step "Claude plugins"
-
-$requiredPlugins = @(
-    "context7@claude-plugins-official"
-    "playwright@claude-plugins-official"
-    "pr-review-toolkit@claude-plugins-official"
-    "security-guidance@claude-plugins-official"
-    "typescript-lsp@claude-plugins-official"
-    "pyright-lsp@claude-plugins-official"
-    "claude-md-management@claude-plugins-official"
-    "claude-code-setup@claude-plugins-official"
-)
-
-$installedPluginsRaw = claude plugin list 2>&1
-foreach ($plugin in $requiredPlugins) {
-    $shortName = $plugin -replace '@claude-plugins-official',''
-    $alreadyInstalled = ($installedPluginsRaw | Select-String -Pattern ([regex]::Escape($shortName)) -Quiet)
-    Invoke-Step -Label "plugin: $plugin" `
-        -Check  { $alreadyInstalled } `
-        -Action {
-            Write-Info "Installing $plugin..."
-            $result = claude plugin install $plugin 2>&1
-            Write-Info $result
-        }
+} else {
+    Fail ".mcp.json missing"
 }
 
-# ---------------------------------------------------------------------------
-# Step 6: Verify with doctor
-# ---------------------------------------------------------------------------
-Write-Step "Doctor verification"
+try {
+    $memoryVersion = (npm view @modelcontextprotocol/server-memory version 2>&1 | Select-Object -First 1)
+    Pass "memory MCP package reachable: $memoryVersion"
+} catch {
+    Fail "Cannot resolve @modelcontextprotocol/server-memory with npm"
+}
 
+Write-Step "Recommended tools"
+if (Test-Cmd gitnexus) {
+    $gitnexusVersion = (gitnexus --version 2>&1 | Select-Object -First 1)
+    Pass "GitNexus: $gitnexusVersion"
+} else {
+    Skip "GitNexus not found (recommended for cross-file safety checks)"
+}
+
+Write-Step "Doctor verification"
 $doctorScript = Join-Path $PSScriptRoot "doctor.ps1"
 if (Test-Path $doctorScript) {
-    Write-Info "Running doctor..."
     & $doctorScript
 } else {
-    Write-Skip "doctor.ps1 not found - skipping"
-    $script:skip++
+    Skip "doctor.ps1 not found"
 }
 
-# ---------------------------------------------------------------------------
-# Summary
-# ---------------------------------------------------------------------------
 Write-Host ""
 Write-Host "===============================================" -ForegroundColor White
-Write-Host "  Install complete" -ForegroundColor White
 if ($script:fail -gt 0) {
-    Write-Host "  Pass: $($script:pass)  Skip: $($script:skip)  Fail: $($script:fail)" -ForegroundColor Red
-} elseif ($script:skip -gt 0) {
-    Write-Host "  Pass: $($script:pass)  Skip: $($script:skip)  Fail: $($script:fail)" -ForegroundColor Yellow
-} else {
-    Write-Host "  Pass: $($script:pass)  Skip: $($script:skip)  Fail: $($script:fail)" -ForegroundColor Green
-}
-Write-Host "===============================================" -ForegroundColor White
-Write-Host ""
-
-if ($script:fail -gt 0) {
-    Write-Host "  Some steps failed. Fix the issues above and re-run:" -ForegroundColor Red
-    Write-Host "    .\scripts\install.ps1"
-    Write-Host ""
+    Write-Host "  Install complete -- Pass: $($script:pass)  Skip: $($script:skip)  Fail: $($script:fail)" -ForegroundColor Red
+    Write-Host "  Fix the failures above and re-run: .\scripts\install.ps1" -ForegroundColor Red
     exit 1
+} elseif ($script:skip -gt 0) {
+    Write-Host "  Install complete -- Pass: $($script:pass)  Skip: $($script:skip)  Fail: $($script:fail)" -ForegroundColor Yellow
+} else {
+    Write-Host "  Install complete -- Pass: $($script:pass)  Skip: $($script:skip)  Fail: $($script:fail)" -ForegroundColor Green
 }
-
+Write-Host "===============================================" -ForegroundColor White
+Write-Host ""
 Write-Host "  Next steps:" -ForegroundColor Cyan
-Write-Host "    1. Start BarcaTeam against your target repo(s):"
-Write-Host "         .\start.ps1 path\to\repo"
+Write-Host "    1. Sign in if needed: copilot"
+Write-Host "    2. Start BarcaTeam: .\start.ps1 <repo-name-or-path>"
+Write-Host "    3. Check health: .\scripts\doctor.ps1"
 Write-Host ""
-Write-Host "    2. Check install health any time:"
-Write-Host "         .\scripts\doctor.ps1"
-Write-Host ""
-Write-Host "    3. Configure WhatsApp (claude-ping):"
-Write-Host "         Open a Claude session with BarcaTeam -- claude-ping will prompt for a QR code."
-Write-Host ""
-Write-Host "  See CLAUDE.md for advanced configuration."
-Write-Host ""
+
