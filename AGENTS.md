@@ -6,7 +6,9 @@ BarcaTeam is a multi-agent software-delivery harness for **GitHub Copilot CLI**.
 
 ## Agent catalog
 
-Agents are defined in `.github/agents/*.agent.md` and auto-discovered by Copilot CLI.
+Agents are defined in `.github/agents/*.agent.md` (single source of truth) and auto-discovered by Copilot CLI.
+
+> **Dual-location requirement (Copilot CLI v1.0.69-2):** the CLI *discovers* agents from `.github/agents/*.agent.md` but *loads the body at spawn time* from `.claude/agents/<name>.md`. Both must exist or spawning fails with `ENOENT: .claude\agents\<name>.md`. After adding or editing any agent, run `pwsh scripts/sync-agents.ps1` to regenerate the `.claude/agents/*.md` copies. Never hand-edit those copies.
 
 **Core team:** `lead` (orchestrator), `pm`, `architect`, `senior-engineer`, `qa`, `conversational-ux-engineer`, `ux-engineer`, `mcp-infrastructure-engineer`.
 
